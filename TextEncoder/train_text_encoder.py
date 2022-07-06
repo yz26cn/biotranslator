@@ -19,7 +19,7 @@ import os
 # the path where you save the model
 save_model = 'model/text_encoder.pth'
 # the path where you store the data
-graphine_repo = '/data/xuhw/data/Graphine/dataset/'
+graphine_repo = './data/Graphine/dataset/'
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')

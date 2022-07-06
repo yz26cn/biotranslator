@@ -20,7 +20,8 @@ if __name__ == '__main__':
     # choose the task you want evaluate: zero shot task or few shot task
     parser.add_argument('--task', type=str, default='few_shot', help='Choose between zero_shot task and few_shot task')
     # specify the dataset root dir
-    parser.add_argument('--data_repo', type=str, default='/data/xuhw/data/ProteinDataset/', help='Where you store the potein dataset, this folder should contains GOA_Human, GOA_Mouse, GOA_Yeast, SwissProt, CAFA3 folder.')
+
+    parser.add_argument('--data_repo', type=str, default='./data/ProteinDataset/', help='Where you store the potein dataset, this folder should contains GOA_Human, GOA_Mouse, GOA_Yeast, SwissProt, CAFA3 folder.')
     # Specify the encoder model path, this model will be used only when you do not have embeddings in emb_path
     parser.add_argument('--encoder_path', type=str, default='../TextEncoder/Encoder/encoder.pth', help='The path of text encoder model')
     # please specify where you cache the go term embeddings
@@ -38,7 +39,7 @@ if __name__ == '__main__':
     parser.add_argument('--epoch', type=int, default=30, help='Training epochs.')
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
     # The GPU ids
-    parser.add_argument('--gpu_ids', type=str, default='3', help='Specify which GPU you want to use')
+    parser.add_argument('--gpu_ids', type=str, default='0', help='Specify which GPU you want to use')
 
     args = parser.parse_args()
     args = args.__dict__

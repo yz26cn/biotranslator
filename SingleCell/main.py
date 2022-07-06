@@ -22,9 +22,9 @@ if __name__ == '__main__':
     # choose the task you want evaluate:  same_dataset task or cross_dataset
     parser.add_argument('--task', type=str, default='cross_dataset', help='Choose between same_dataset task and cross_dataset task')
     # specify the dataset root dir
-    parser.add_argument('--data_repo', type=str, default='/data/xuhw/data/sc_data/', help='Where you store the single cell dataset.')
+    parser.add_argument('--data_repo', type=str, default='./data/sc_data/', help='Where you store the single cell dataset.')
     # specify the ontology data path
-    parser.add_argument('--ontology_repo', type=str, default='/data/xuhw/data/Ontology_data/', help='Where you store the Cell Ontology data.')
+    parser.add_argument('--ontology_repo', type=str, default='./data/Ontology_data/', help='Where you store the Cell Ontology data.')
     # Specify the encoder model path, this model will be used only when you do not have embeddings in emb_path
     parser.add_argument('--encoder_path', type=str, default='../TextEncoder/Encoder/encoder.pth', help='The path of text encoder model')
     # please specify where you cache the cell ontology term embeddings
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     parser.add_argument('--epoch', type=int, default=15, help='Training epochs.')
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
     # The GPU ids
-    parser.add_argument('--gpu_ids', type=str, default='3', help='Specify which GPU you want to use')
+    parser.add_argument('--gpu_ids', type=str, default='0', help='Specify which GPU you want to use')
 
     args = parser.parse_args()
     args = args.__dict__

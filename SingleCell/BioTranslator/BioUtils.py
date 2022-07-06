@@ -31,7 +31,7 @@ from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.model_selection import train_test_split
 from sklearn.metrics.pairwise import cosine_similarity
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
-from sklearn.utils.graph_shortest_path import graph_shortest_path
+from scipy.sparse.csgraph._shortest_path import shortest_path
 from sklearn.metrics import auc, average_precision_score, precision_recall_curve
 
 
@@ -113,31 +113,31 @@ def read_cell_type_nlp_network(nlp_emb_file, cell_type_network_file):
 
 
 def subset_cell_type_nlp_network(co2co_graph, co2co_nlp, co2vec_nlp, cell_ontology_ids, subsets):
-	new_co2co_graph, new_co2co_nlp, new_co2vec_nlp = {}, {}, {}
-	new_co_ids = set()
-	for co_i in subsets:
-		if co_i in co2co_graph.keys():
-			co_i_cncts = co2co_graph[co_i]
-			new_cncts = set()
-			for co_i_cnct in co_i_cncts:
-				if co_i_cnct in subsets:
-					new_cncts.add(co_i_cnct)
-			if len(new_cncts) > 0:
-				new_co2co_graph[co_i] = new_cncts
-		if co_i in co2co_nlp.keys():
-			co_i_cncts = co2co_nlp[co_i]
-			new_cncts = {}
-			for co_i_cnct in co_i_cncts.keys():
-				if co_i_cnct in subsets:
-					new_co_ids.add(co_i_cnct)
-					new_cncts[co_i_cnct] = co_i_cncts[co_i_cnct]
-			if len(new_cncts.keys()) > 0:
-				new_co_ids.add(co_i)
-				new_co2co_nlp[co_i] = new_cncts
-	for co_i in new_co_ids:
-		if co_i in co2vec_nlp.keys():
-			new_co2vec_nlp[co_i] = co2vec_nlp[co_i]
-	return new_co2co_graph, new_co2co_nlp, new_co2vec_nlp, new_co_ids
+    new_co2co_graph, new_co2co_nlp, new_co2vec_nlp = {}, {}, {}
+    new_co_ids = set()
+    for co_i in subsets:
+        if co_i in co2co_graph.keys():
+            co_i_cncts = co2co_graph[co_i]
+            new_cncts = set()
+            for co_i_cnct in co_i_cncts:
+                if co_i_cnct in subsets:
+                    new_cncts.add(co_i_cnct)
+            if len(new_cncts) > 0:
+                new_co2co_graph[co_i] = new_cncts
+        if co_i in co2co_nlp.keys():
+            co_i_cncts = co2co_nlp[co_i]
+            new_cncts = {}
+            for co_i_cnct in co_i_cncts.keys():
+                if co_i_cnct in subsets:
+                    new_co_ids.add(co_i_cnct)
+                    new_cncts[co_i_cnct] = co_i_cncts[co_i_cnct]
+            if len(new_cncts.keys()) > 0:
+                new_co_ids.add(co_i)
+                new_co2co_nlp[co_i] = new_cncts
+    for co_i in new_co_ids:
+        if co_i in co2vec_nlp.keys():
+            new_co2vec_nlp[co_i] = co2vec_nlp[co_i]
+    return new_co2co_graph, new_co2co_nlp, new_co2vec_nlp, new_co_ids
 
 
 def map_genes(test_X, test_genes, train_genes, num_batches=10, memory_saving_mode=False):
@@ -328,7 +328,8 @@ def graph_embedding_dca(A, i2l, mi=0, dim=20, unseen_l=None):
     # if len(seen_ind) * 0.8 < dim:
     #	dim = int(len(seen_ind) * 0.8)
     if mi == 0 or mi == 1:
-        sp = graph_shortest_path(A, method='FW', directed=False)
+        # sp = graph_shortest_path(A, method='FW', directed=False)
+        sp = shortest_path(A, method='FW', directed=False)
     else:
         sp = RandomWalkRestart(A, 0.8)
 
@@ -338,7 +339,7 @@ def graph_embedding_dca(A, i2l, mi=0, dim=20, unseen_l=None):
     svd_dim = min(dim, np.shape(sp)[0] - 1)
     if mi == 0 or mi == 2:
         print('please set mi=3')
-        #X[:, :svd_dim] = svd_emb(sp, dim=svd_dim)
+        # X[:, :svd_dim] = svd_emb(sp, dim=svd_dim)
     else:
         X[:, :svd_dim] = DCA_vector(sp, dim=svd_dim)[0]
     X_ret = np.zeros((nl, dim))
@@ -363,20 +364,20 @@ def emb_ontology(i2l, ontology_mat, co2co_nlp, dim=5, mi=0, unseen_l=None):
 
 
 def get_ontology_parents(GO_net, g, dfs_depth=100):
-	term_valid = set()
-	ngh_GO = set()
-	ngh_GO.add(g)
-	depth = {}
-	depth[g] = 0
-	while len(ngh_GO) > 0:
-		for GO in list(ngh_GO):
-			for GO1 in GO_net[GO]:
-				ngh_GO.add(GO1)
-				depth[GO1] = depth[GO] + 1
-			ngh_GO.remove(GO)
-			if depth[GO] < dfs_depth:
-				term_valid.add(GO)
-	return term_valid
+    term_valid = set()
+    ngh_GO = set()
+    ngh_GO.add(g)
+    depth = {}
+    depth[g] = 0
+    while len(ngh_GO) > 0:
+        for GO in list(ngh_GO):
+            for GO1 in GO_net[GO]:
+                ngh_GO.add(GO1)
+                depth[GO1] = depth[GO] + 1
+            ngh_GO.remove(GO)
+            if depth[GO] < dfs_depth:
+                term_valid.add(GO)
+    return term_valid
 
 
 def creat_cell_ontology_matrix(train_Y, co2co_graph, cell_ontology_ids, dfs_depth):
@@ -420,8 +421,10 @@ class DataProcessing:
         """
         self.cell_type_nlp_emb_file = cell_type_nlp_emb_file
         self.cell_type_network_file = cell_type_network_file
-        self.co2co_graph, self.co2co_nlp, self.co2vec_nlp, self.cell_ontology_ids = read_cell_type_nlp_network(self.cell_type_nlp_emb_file, self.cell_type_network_file)
-        self.co2co_graph, self.co2co_nlp, self.co2vec_nlp, self.cell_ontology_ids = subset_cell_type_nlp_network(self.co2co_graph, self.co2co_nlp, self.co2vec_nlp, self.cell_ontology_ids, terms_with_def)
+        self.co2co_graph, self.co2co_nlp, self.co2vec_nlp, self.cell_ontology_ids = read_cell_type_nlp_network(
+            self.cell_type_nlp_emb_file, self.cell_type_network_file)
+        self.co2co_graph, self.co2co_nlp, self.co2vec_nlp, self.cell_ontology_ids = subset_cell_type_nlp_network(
+            self.co2co_graph, self.co2co_nlp, self.co2vec_nlp, self.cell_ontology_ids, terms_with_def)
         self.mode = memory_saving_mode
 
     def ProcessTrainFeature(self, train_feature, train_label, train_genes, test_feature=None, test_genes=None,
@@ -602,231 +605,233 @@ def emb2tensor(def_embeddings, terms, add_bias=False):
 
 
 def read_data_file(dname, data_dir):
-	if 'microcebus' in dname and 'tabula_microcebus' not in dname:
-		tech = '10x'
-		feature_file = data_dir + 'Lemur/' + dname +'.h5ad'
-		filter_key={'method':tech }
-		label_file = None
-		gene_file = ''
-		label_key = 'cell_ontology_class'
-	elif 'tabula_microcebus' in dname:
-		tech = dname.split('_')[1]
-		feature_file = data_dir + 'Tabula_Microcebus/' + 'LCA_complete_wRaw_toPublish.h5ad'
-		filter_key = {}
-		label_file = None
-		gene_file = ''
-		batch_key = ''
-		label_key = 'cell_ontology_class_v1'
-	elif 'sapiens' in dname:
-		feature_file = data_dir + 'Tabula_Sapiens/' + 'TabulaSapiens.h5ad'
-		filter_key = {}
-		label_file = None
-		gene_file = ''
-		batch_key = ''
-		label_key = 'cell_ontology_class'
-	elif 'muris' in dname:
-		tech = dname.split('_')[1]
-		feature_file = data_dir + 'Tabula_Muris_Senis/' + 'tabula-muris-senis-'+tech+'-official-raw-obj.h5ad'
-		filter_key = {}
-		label_file = None
-		gene_file = ''
-		batch_key = ''
-		label_key = 'cell_ontology_class'
-	elif 'sapiens' in dname:
-		feature_file = data_dir + 'sapiens/' + 'Pilot1_Pilot2_decontX_Oct2020.h5ad'
-		filter_key = {}
-		label_file = None
-		gene_file = ''
-		batch_key = ''
-		label_key = 'cell_ontology_type'
-	elif 'allen' in dname:
-		feature_file = data_dir + '/Allen_Brain/features.pkl'
-		label_file = data_dir + '/Allen_Brain/labels.pkl'
-		gene_file = data_dir + '/Allen_Brain/genes.pkl'
-		label_key = ''
-		filter_key = {}
-	elif 'krasnow' in dname:
-		tech = dname.split('_')[1]
-		feature_file = data_dir + '/HLCA/'+tech+'_features.pkl'
-		label_file = data_dir + '/HLCA/'+tech+'_labels.pkl'
-		gene_file = data_dir + '/HLCA/'+tech+'_genes.pkl'
-		label_key = ''
-		filter_key = {}
-	else:
-		sys.exit('wrong dname '+dname)
-	if feature_file.endswith('.pkl'):
-		return feature_file, filter_key, label_key, label_file, gene_file
-	elif feature_file.endswith('.h5ad'):
-		return feature_file, filter_key, label_key, label_file, gene_file
-	sys.exit('wrong file suffix')
+    if 'microcebus' in dname and 'tabula_microcebus' not in dname:
+        tech = '10x'
+        feature_file = data_dir + 'Lemur/' + dname + '.h5ad'
+        filter_key = {'method': tech}
+        label_file = None
+        gene_file = ''
+        label_key = 'cell_ontology_class'
+    elif 'tabula_microcebus' in dname:
+        tech = dname.split('_')[1]
+        feature_file = data_dir + 'Tabula_Microcebus/' + 'LCA_complete_wRaw_toPublish.h5ad'
+        filter_key = {}
+        label_file = None
+        gene_file = ''
+        batch_key = ''
+        label_key = 'cell_ontology_class_v1'
+    elif 'sapiens' in dname:
+        feature_file = data_dir + 'Tabula_Sapiens/' + 'TabulaSapiens.h5ad'
+        filter_key = {}
+        label_file = None
+        gene_file = ''
+        batch_key = ''
+        label_key = 'cell_ontology_class'
+    elif 'muris' in dname:
+        tech = dname.split('_')[1]
+        feature_file = data_dir + 'Tabula_Muris_Senis/' + 'tabula-muris-senis-' + tech + '-official-raw-obj.h5ad'
+        filter_key = {}
+        label_file = None
+        gene_file = ''
+        batch_key = ''
+        label_key = 'cell_ontology_class'
+    elif 'sapiens' in dname:
+        feature_file = data_dir + 'sapiens/' + 'Pilot1_Pilot2_decontX_Oct2020.h5ad'
+        filter_key = {}
+        label_file = None
+        gene_file = ''
+        batch_key = ''
+        label_key = 'cell_ontology_type'
+    elif 'allen' in dname:
+        feature_file = data_dir + '/Allen_Brain/features.pkl'
+        label_file = data_dir + '/Allen_Brain/labels.pkl'
+        gene_file = data_dir + '/Allen_Brain/genes.pkl'
+        label_key = ''
+        filter_key = {}
+    elif 'krasnow' in dname:
+        tech = dname.split('_')[1]
+        feature_file = data_dir + '/HLCA/' + tech + '_features.pkl'
+        label_file = data_dir + '/HLCA/' + tech + '_labels.pkl'
+        gene_file = data_dir + '/HLCA/' + tech + '_genes.pkl'
+        label_key = ''
+        filter_key = {}
+    else:
+        sys.exit('wrong dname ' + dname)
+    if feature_file.endswith('.pkl'):
+        return feature_file, filter_key, label_key, label_file, gene_file
+    elif feature_file.endswith('.h5ad'):
+        return feature_file, filter_key, label_key, label_file, gene_file
+    sys.exit('wrong file suffix')
 
 
 def read_ontology_file(dname, data_folder):
-	if 'allen' in dname:
-		cell_type_network_file = data_folder + 'allen.ontology'
-		cell_type_nlp_emb_file = None
-		cl_obo_file = None
-		if not os.path.isfile(cell_type_network_file):
-			sys.error(cell_type_network_file + ' not found!')
-	else:
-		cell_type_network_file = data_folder + 'cl.ontology'
-		cell_type_nlp_emb_file = data_folder + 'cl.ontology.nlp.emb'
-		cl_obo_file = data_folder + 'cl.obo'
-		if not os.path.isfile(cell_type_nlp_emb_file):
-			sys.exit(cell_type_nlp_emb_file + ' not found!')
-		if not os.path.isfile(cell_type_network_file):
-			sys.exit(cell_type_network_file + ' not found!')
-		if not os.path.isfile(cl_obo_file):
-			sys.exit(cl_obo_file + ' not found!')
-	return cell_type_nlp_emb_file, cell_type_network_file, cl_obo_file
+    if 'allen' in dname:
+        cell_type_network_file = data_folder + 'allen.ontology'
+        cell_type_nlp_emb_file = None
+        cl_obo_file = None
+        if not os.path.isfile(cell_type_network_file):
+            sys.error(cell_type_network_file + ' not found!')
+    else:
+        cell_type_network_file = data_folder + 'cl.ontology'
+        cell_type_nlp_emb_file = data_folder + 'cl.ontology.nlp.emb'
+        cl_obo_file = data_folder + 'cl.obo'
+        if not os.path.isfile(cell_type_nlp_emb_file):
+            sys.exit(cell_type_nlp_emb_file + ' not found!')
+        if not os.path.isfile(cell_type_network_file):
+            sys.exit(cell_type_network_file + ' not found!')
+        if not os.path.isfile(cl_obo_file):
+            sys.exit(cl_obo_file + ' not found!')
+    return cell_type_nlp_emb_file, cell_type_network_file, cl_obo_file
 
 
-def select_cells_based_on_keys(x, features, tissues = None, labels = None, filter_key = None):
-	ncell = np.shape(x.X)[0]
-	select_cells = set(range(ncell))
-	for key in filter_key:
-		value = filter_key[key]
-		select_cells = select_cells & set(np.where(np.array(x.obs[key])==value)[0])
-	select_cells = sorted(select_cells)
-	features = features[select_cells,: ]
-	if labels is not None:
-		labels = labels[select_cells]
-	if tissues is not None:
-		tissues = tissues[select_cells]
-	x = x[select_cells,:]
-	return features, labels, tissues, x
+def select_cells_based_on_keys(x, features, tissues=None, labels=None, filter_key=None):
+    ncell = np.shape(x.X)[0]
+    select_cells = set(range(ncell))
+    for key in filter_key:
+        value = filter_key[key]
+        select_cells = select_cells & set(np.where(np.array(x.obs[key]) == value)[0])
+    select_cells = sorted(select_cells)
+    features = features[select_cells, :]
+    if labels is not None:
+        labels = labels[select_cells]
+    if tissues is not None:
+        tissues = tissues[select_cells]
+    x = x[select_cells, :]
+    return features, labels, tissues, x
 
 
 def get_ontology_name(obo_file, lower=True):
-	fin = open(obo_file)
-	co2name = {}
-	name2co = {}
-	tag_is_syn = {}
-	for line in fin:
-		if line.startswith('id: '):
-			co = line.strip().split('id: ')[1]
-		if line.startswith('name: '):
-			if lower:
-				name = line.strip().lower().split('name: ')[1]
-			else:
-				name = line.strip().split('name: ')[1]
-			co2name[co] = name
-			name2co[name] = co
-		if line.startswith('synonym: '):
-			if lower:
-				syn = line.strip().lower().split('synonym: "')[1].split('" ')[0]
-			else:
-				syn = line.strip().split('synonym: "')[1].split('" ')[0]
-			if syn in name2co:
-				continue
-			name2co[syn] = co
-	fin.close()
-	return co2name, name2co
+    fin = open(obo_file)
+    co2name = {}
+    name2co = {}
+    tag_is_syn = {}
+    for line in fin:
+        if line.startswith('id: '):
+            co = line.strip().split('id: ')[1]
+        if line.startswith('name: '):
+            if lower:
+                name = line.strip().lower().split('name: ')[1]
+            else:
+                name = line.strip().split('name: ')[1]
+            co2name[co] = name
+            name2co[name] = co
+        if line.startswith('synonym: '):
+            if lower:
+                syn = line.strip().lower().split('synonym: "')[1].split('" ')[0]
+            else:
+                syn = line.strip().split('synonym: "')[1].split('" ')[0]
+            if syn in name2co:
+                continue
+            name2co[syn] = co
+    fin.close()
+    return co2name, name2co
 
 
-def fine_nearest_co_using_nlp(sentences,co2emb,obo_file,nlp_mapping_cutoff=0.8):
-	co2name, name2co = get_ontology_name(obo_file = obo_file)
-	from sentence_transformers import SentenceTransformer
-	model = SentenceTransformer('bert-base-nli-mean-tokens')
-	sentences = np.array([sentence.lower() for sentence in sentences])
-	sentence_embeddings = model.encode(sentences)
-	co_embeddings = []
-	cos = []
-	for co in co2emb:
-		co_embeddings.append(co2emb[co])
-		cos.append(co)
-	co_embeddings = np.array(co_embeddings)
-	sent2co = {}
-	for sentence, embedding, ind in zip(sentences, sentence_embeddings, range(len(sentences))):
-		scs = cosine_similarity(co_embeddings, embedding.reshape(1,-1))
+def fine_nearest_co_using_nlp(sentences, co2emb, obo_file, nlp_mapping_cutoff=0.8):
+    co2name, name2co = get_ontology_name(obo_file=obo_file)
+    from sentence_transformers import SentenceTransformer
+    model = SentenceTransformer('bert-base-nli-mean-tokens')
+    sentences = np.array([sentence.lower() for sentence in sentences])
+    sentence_embeddings = model.encode(sentences)
+    co_embeddings = []
+    cos = []
+    for co in co2emb:
+        co_embeddings.append(co2emb[co])
+        cos.append(co)
+    co_embeddings = np.array(co_embeddings)
+    sent2co = {}
+    for sentence, embedding, ind in zip(sentences, sentence_embeddings, range(len(sentences))):
+        scs = cosine_similarity(co_embeddings, embedding.reshape(1, -1))
 
-		co_id = np.argmax(scs)
-		sc = scs[co_id]
-		if sc>nlp_mapping_cutoff:
-			sent2co[sentence.lower()] = cos[co_id]
-			names = set()
-			for name in name2co:
-				if name2co[name].upper() == cos[co_id]:
-					names.add(name)
-			#print (sentence, cos[co_id], sc, co2name[cos[co_id]],names)
-	return sent2co
-
-
-def exact_match_co_name_2_co_id(labels, lab2co, cl_obo_file = None):
-	if cl_obo_file is None:
-		return lab2co
-	co2name, name2co = get_ontology_name(obo_file = cl_obo_file)
-	for label in labels:
-		if label.lower() in name2co:
-			lab2co[label.lower()] = name2co[label.lower()]
-	for name in name2co:
-		lab2co[name.lower()] = name2co[name]
-	return lab2co
+        co_id = np.argmax(scs)
+        sc = scs[co_id]
+        if sc > nlp_mapping_cutoff:
+            sent2co[sentence.lower()] = cos[co_id]
+            names = set()
+            for name in name2co:
+                if name2co[name].upper() == cos[co_id]:
+                    names.add(name)
+        # print (sentence, cos[co_id], sc, co2name[cos[co_id]],names)
+    return sent2co
 
 
-def map_and_select_labels(labels, cell_ontology_ids, obo_file, ct_mapping_key = {}, nlp_mapping = True, nlp_mapping_cutoff = 0.8, co2emb = None, cl_obo_file = None):
-	lab2co = {}
-	if nlp_mapping:
-		if co2emb is None:
-			sys.exit('Please provide cell type embedding to do NLP-based mapping.')
-		lab2co = fine_nearest_co_using_nlp(np.unique(labels), co2emb, obo_file,nlp_mapping_cutoff = nlp_mapping_cutoff)
-	lab2co = exact_match_co_name_2_co_id(np.unique(labels), lab2co, cl_obo_file = cl_obo_file)
-	for ct in ct_mapping_key:
-		lab2co[ct_mapping_key[ct]] = lab2co[ct]
-	ind = []
-	lab_id = []
-	unfound_labs = set()
-	for i,l in enumerate(labels):
-		if l in cell_ontology_ids:
-			ind.append(i)
-			lab_id.append(l)
-		elif l.lower() in lab2co:
-			ind.append(i)
-			lab_id.append(lab2co[l.lower()])
-		else:
-			unfound_labs.add(l)
-	frac = len(ind) * 1. / len(labels)
-	ind = np.array(ind)
-	labels = np.array(lab_id)
-	unfound_labs = set(unfound_labs)
-	warn_message = 'Warning: Only: %f precentage of labels are in the Cell Ontology. The remaining cells are excluded! Consider using NLP mapping and choose a small mapping cutoff (nlp_mapping_cutoff)' % (frac * 100)
-	if frac < 0.5:
-		print (warn_message)
-		print ('Here are unfound labels:',unfound_labs)
-	return ind, labels, unfound_labs
+def exact_match_co_name_2_co_id(labels, lab2co, cl_obo_file=None):
+    if cl_obo_file is None:
+        return lab2co
+    co2name, name2co = get_ontology_name(obo_file=cl_obo_file)
+    for label in labels:
+        if label.lower() in name2co:
+            lab2co[label.lower()] = name2co[label.lower()]
+    for name in name2co:
+        lab2co[name.lower()] = name2co[name]
+    return lab2co
 
 
-def exclude_parent_child_nodes(cell_ontology_file,labels):
-	uniq_labels = np.unique(labels)
-	excludes = set()
-	net = collections.defaultdict(dict)
-	fin = open(cell_ontology_file)
-	for line in fin:
-		s,p = line.strip().split('\t')
-		net[s][p] = 1 #p is parent
-	fin.close()
-	for n in list(net.keys()):
-		ngh = get_ontology_parents(net, n)
-		for n1 in ngh:
-			net[n][n1] = 1
-	for l1 in uniq_labels:
-		for l2 in uniq_labels:
-			if l1 in net[l2] and l1!=l2: #l1 is l2 parent
-				excludes.add(l1)
-	#print (excludes)
-	new_ids = []
-	for i in range(len(labels)):
-		if labels[i] not in excludes:
-			new_ids.append(i)
-	new_ids = np.array(new_ids)
-	return new_ids, excludes
+def map_and_select_labels(labels, cell_ontology_ids, obo_file, ct_mapping_key={}, nlp_mapping=True,
+                          nlp_mapping_cutoff=0.8, co2emb=None, cl_obo_file=None):
+    lab2co = {}
+    if nlp_mapping:
+        if co2emb is None:
+            sys.exit('Please provide cell type embedding to do NLP-based mapping.')
+        lab2co = fine_nearest_co_using_nlp(np.unique(labels), co2emb, obo_file, nlp_mapping_cutoff=nlp_mapping_cutoff)
+    lab2co = exact_match_co_name_2_co_id(np.unique(labels), lab2co, cl_obo_file=cl_obo_file)
+    for ct in ct_mapping_key:
+        lab2co[ct_mapping_key[ct]] = lab2co[ct]
+    ind = []
+    lab_id = []
+    unfound_labs = set()
+    for i, l in enumerate(labels):
+        if l in cell_ontology_ids:
+            ind.append(i)
+            lab_id.append(l)
+        elif l.lower() in lab2co:
+            ind.append(i)
+            lab_id.append(lab2co[l.lower()])
+        else:
+            unfound_labs.add(l)
+    frac = len(ind) * 1. / len(labels)
+    ind = np.array(ind)
+    labels = np.array(lab_id)
+    unfound_labs = set(unfound_labs)
+    warn_message = 'Warning: Only: %f precentage of labels are in the Cell Ontology. The remaining cells are excluded! Consider using NLP mapping and choose a small mapping cutoff (nlp_mapping_cutoff)' % (
+                frac * 100)
+    if frac < 0.5:
+        print(warn_message)
+        print('Here are unfound labels:', unfound_labs)
+    return ind, labels, unfound_labs
+
+
+def exclude_parent_child_nodes(cell_ontology_file, labels):
+    uniq_labels = np.unique(labels)
+    excludes = set()
+    net = collections.defaultdict(dict)
+    fin = open(cell_ontology_file)
+    for line in fin:
+        s, p = line.strip().split('\t')
+        net[s][p] = 1  # p is parent
+    fin.close()
+    for n in list(net.keys()):
+        ngh = get_ontology_parents(net, n)
+        for n1 in ngh:
+            net[n][n1] = 1
+    for l1 in uniq_labels:
+        for l2 in uniq_labels:
+            if l1 in net[l2] and l1 != l2:  # l1 is l2 parent
+                excludes.add(l1)
+    # print (excludes)
+    new_ids = []
+    for i in range(len(labels)):
+        if labels[i] not in excludes:
+            new_ids.append(i)
+    new_ids = np.array(new_ids)
+    return new_ids, excludes
 
 
 def read_data(feature_file, cell_ontology_ids, exclude_non_leaf_ontology=False, ct_mapping_key={}, tissue_key=None,
-			  seed=1, filter_key=None, AnnData_label_key=None, nlp_mapping=True, nlp_mapping_cutoff=0.8, co2emb=None,
-			  label_file=None, cl_obo_file=None, cell_ontology_file=None, memory_saving_mode=False,
-			  backup_file='sparse_featurefile_backup'):
-	"""
+              seed=1, filter_key=None, AnnData_label_key=None, nlp_mapping=True, nlp_mapping_cutoff=0.8, co2emb=None,
+              label_file=None, cl_obo_file=None, cell_ontology_file=None, memory_saving_mode=False,
+              backup_file='sparse_featurefile_backup'):
+    """
 	Read data from the given feature file, and processes it so that it fits with the other
 	given paramters as needed.
 	Parameters
@@ -857,78 +862,77 @@ def read_data(feature_file, cell_ontology_ids, exclude_non_leaf_ontology=False, 
 	x: AnnData object stored in the given feature file
 	"""
 
-	np.random.seed(seed)
+    np.random.seed(seed)
 
-	if memory_saving_mode:
-		x = read_h5ad(feature_file, backed='r+')
-		if 'Tabula_Microcebus' in feature_file or 'TabulaSapiens' in feature_file:
-			x.raw = None
-		dataset = x.X.to_memory()  # Gets a sparse array in csr matrix form
-	else:
-		x = read_h5ad(feature_file)
-		dataset = x.X.toarray()
+    if memory_saving_mode:
+        x = read_h5ad(feature_file, backed='r+')
+        if 'Tabula_Microcebus' in feature_file or 'TabulaSapiens' in feature_file:
+            x.raw = None
+        dataset = x.X.to_memory()  # Gets a sparse array in csr matrix form
+    else:
+        x = read_h5ad(feature_file)
+        dataset = x.X.toarray()
 
-	# if memory_saving_mode:
-	#    print_memory_usage("while reading data")
+    # if memory_saving_mode:
+    #    print_memory_usage("while reading data")
 
-	ncell = np.shape(x.X)[0]
-	genes = np.array([x.upper() for x in x.var.index])
+    ncell = np.shape(x.X)[0]
+    genes = np.array([x.upper() for x in x.var.index])
 
+    if tissue_key is not None and 'TabulaSapiens' not in feature_file:
+        tissues = np.array(x.obs[tissue_key].tolist())
+    else:
+        tissues = None
+    if AnnData_label_key is None and label_file is None:
+        print('no label file is provided')
+        labels = None
+        dataset, labels, tissues, x = select_cells_based_on_keys(x, dataset, labels=labels, tissues=tissues,
+                                                                 filter_key=filter_key)
+        return dataset, genes, labels, tissues, x
+    if AnnData_label_key is not None:
+        labels = x.obs[AnnData_label_key].tolist()
+    else:
+        fin = open(label_file)
+        labels = []
+        for line in fin:
+            labels.append(line.strip())
+        fin.close()
+    labels = np.array(labels)
+    dataset, labels, tissues, x = select_cells_based_on_keys(x, dataset, labels=labels, tissues=tissues,
+                                                             filter_key=filter_key)
 
-	if tissue_key is not None and 'TabulaSapiens' not in feature_file:
-		tissues = np.array(x.obs[tissue_key].tolist())
-	else:
-		tissues = None
-	if AnnData_label_key is None and label_file is None:
-		print('no label file is provided')
-		labels = None
-		dataset, labels, tissues, x = select_cells_based_on_keys(x, dataset, labels=labels, tissues=tissues,
-																 filter_key=filter_key)
-		return dataset, genes, labels, tissues, x
-	if AnnData_label_key is not None:
-		labels = x.obs[AnnData_label_key].tolist()
-	else:
-		fin = open(label_file)
-		labels = []
-		for line in fin:
-			labels.append(line.strip())
-		fin.close()
-	labels = np.array(labels)
-	dataset, labels, tissues, x = select_cells_based_on_keys(x, dataset, labels=labels, tissues=tissues,
-															 filter_key=filter_key)
+    if memory_saving_mode:
+        x = x.copy(filename=backup_file)
 
-	if memory_saving_mode:
-		x = x.copy(filename=backup_file)
+    ind, labels, unfound_labs = map_and_select_labels(labels, cell_ontology_ids, cl_obo_file,
+                                                      ct_mapping_key=ct_mapping_key, nlp_mapping=nlp_mapping,
+                                                      co2emb=co2emb, nlp_mapping_cutoff=nlp_mapping_cutoff,
+                                                      cl_obo_file=cl_obo_file)
+    if tissue_key is not None and 'TabulaSapiens' not in feature_file:
+        tissues = tissues[ind]
+    dataset = dataset[ind, :]
 
-	ind, labels, unfound_labs = map_and_select_labels(labels, cell_ontology_ids, cl_obo_file,
-													  ct_mapping_key=ct_mapping_key, nlp_mapping=nlp_mapping,
-													  co2emb=co2emb, nlp_mapping_cutoff=nlp_mapping_cutoff,
-													  cl_obo_file=cl_obo_file)
-	if tissue_key is not None and 'TabulaSapiens' not in feature_file:
-		tissues = tissues[ind]
-	dataset = dataset[ind, :]
+    if memory_saving_mode:
+        # Need to copy to disk for rewriting to the sparse dataset
+        x = x[ind, :].copy(filename=backup_file)
+    else:
+        x = x[ind, :]
 
-	if memory_saving_mode:
-		# Need to copy to disk for rewriting to the sparse dataset
-		x = x[ind, :].copy(filename=backup_file)
-	else:
-		x = x[ind, :]
+    if exclude_non_leaf_ontology:
+        new_ids, exclude_terms = exclude_parent_child_nodes(cell_ontology_file, labels)
+        if tissues is not None:
+            tissues = tissues[new_ids]
+        dataset = dataset[new_ids, :]
+        labels = labels[new_ids]
+        x = x[new_ids, :]
 
-	if exclude_non_leaf_ontology:
-		new_ids, exclude_terms = exclude_parent_child_nodes(cell_ontology_file, labels)
-		if tissues is not None:
-			tissues = tissues[new_ids]
-		dataset = dataset[new_ids, :]
-		labels = labels[new_ids]
-		x = x[new_ids, :]
-
-	ncell = np.shape(dataset)[0]
-	index = np.random.choice(ncell, ncell, replace=False)
-	dataset = dataset[index, :]  # cell by gene matrix
-	labels = labels[index]
-	if tissue_key is not None and 'TabulaSapiens' not in feature_file:
-		tissues = tissues[index]
-	return dataset, genes, labels, tissues, x
+    ncell = np.shape(dataset)[0]
+    index = np.random.choice(ncell, ncell, replace=False)
+    dataset = dataset[index, :]  # cell by gene matrix
+    labels = labels[index]
+    if tissue_key is not None and 'TabulaSapiens' not in feature_file:
+        tissues = tissues[index]
+    return dataset, genes, labels, tissues, x
 
 
 def load_co_text(co_data_path):
@@ -1026,14 +1030,14 @@ def get_BioTranslator_emb(cfg):
 
 
 def extract_data_based_on_class(feats, labels, sel_labels):
-	ind = []
-	for l in sel_labels:
-		id = np.where(labels == l)[0]
-		ind.extend(id)
-	np.random.shuffle(ind)
-	X = feats[ind,:]
-	Y = labels[ind]
-	return X, Y, ind
+    ind = []
+    for l in sel_labels:
+        id = np.where(labels == l)[0]
+        ind.extend(id)
+    np.random.shuffle(ind)
+    X = feats[ind, :]
+    Y = labels[ind]
+    return X, Y, ind
 
 
 def SplitTrainTest(all_X, all_Y, all_tissues=None, random_state=10, nfold_cls=0.3, nfold_sample=0.2, nmin_size=10,
@@ -1105,56 +1109,56 @@ def compute_prc(labels, preds):
 
 
 def evaluate_unseen_auroc(inference_preds, inference_label, unseen2i):
-	roc_macro = np.zeros(len(unseen2i.values()))
-	unseen_id = list(unseen2i.values())
-	cl_i = 0
-	for i in unseen_id:
-		unseen_preds, unseen_labels = inference_preds[:, i], inference_label[:, i]
-		auroc = compute_roc(unseen_labels, unseen_preds)
-		roc_macro[cl_i] = auroc
-		cl_i += 1
-	return np.mean(roc_macro)
+    roc_macro = np.zeros(len(unseen2i.values()))
+    unseen_id = list(unseen2i.values())
+    cl_i = 0
+    for i in unseen_id:
+        unseen_preds, unseen_labels = inference_preds[:, i], inference_label[:, i]
+        auroc = compute_roc(unseen_labels, unseen_preds)
+        roc_macro[cl_i] = auroc
+        cl_i += 1
+    return np.mean(roc_macro)
 
 
 def evaluate_auroc(inference_preds, inference_label):
-	roc_macro = np.zeros(np.size(inference_label, 1))
-	for cl_i in range(np.size(inference_label, 1)):
-		roc_auc = compute_roc(inference_label[:, cl_i], inference_preds[:, cl_i])
-		roc_macro[cl_i] = roc_auc
-	roc_auc = np.mean(roc_macro)
-	return roc_auc
+    roc_macro = np.zeros(np.size(inference_label, 1))
+    for cl_i in range(np.size(inference_label, 1)):
+        roc_auc = compute_roc(inference_label[:, cl_i], inference_preds[:, cl_i])
+        roc_macro[cl_i] = roc_auc
+    roc_auc = np.mean(roc_macro)
+    return roc_auc
 
 
-def sampled_auprc(truths,preds):
-	pos = np.where(truths == 1)[0]
-	neg = np.where(truths == 0)[0]
-	assert(len(pos) + len(neg) == len(truths))
-	nneg = len(neg)
-	npos = len(pos)
-	select_neg = np.random.choice(nneg, npos*3, replace = True)
-	select_ind = np.concatenate((pos, select_neg))
-	return average_precision_score(truths[select_ind], preds[select_ind])
+def sampled_auprc(truths, preds):
+    pos = np.where(truths == 1)[0]
+    neg = np.where(truths == 0)[0]
+    assert (len(pos) + len(neg) == len(truths))
+    nneg = len(neg)
+    npos = len(pos)
+    select_neg = np.random.choice(nneg, npos * 3, replace=True)
+    select_ind = np.concatenate((pos, select_neg))
+    return average_precision_score(truths[select_ind], preds[select_ind])
 
 
 def evaluate_unseen_auprc(inference_preds, inference_label, unseen2i):
-	roc_macro = np.zeros(len(unseen2i.values()))
-	unseen_id = list(unseen2i.values())
-	cl_i = 0
-	for i in unseen_id:
-		unseen_preds, unseen_labels = inference_preds[:, i], inference_label[:, i]
-		auroc = sampled_auprc(unseen_labels, unseen_preds)
-		roc_macro[cl_i] = auroc
-		cl_i += 1
-	return np.mean(roc_macro)
+    roc_macro = np.zeros(len(unseen2i.values()))
+    unseen_id = list(unseen2i.values())
+    cl_i = 0
+    for i in unseen_id:
+        unseen_preds, unseen_labels = inference_preds[:, i], inference_label[:, i]
+        auroc = sampled_auprc(unseen_labels, unseen_preds)
+        roc_macro[cl_i] = auroc
+        cl_i += 1
+    return np.mean(roc_macro)
 
 
 def evaluate_auprc(inference_preds, inference_label):
-	roc_macro = np.zeros(np.size(inference_label, 1))
-	for cl_i in range(np.size(inference_label, 1)):
-		roc_auc = sampled_auprc(inference_label[:, cl_i], inference_preds[:, cl_i])
-		roc_macro[cl_i] = roc_auc
-	roc_auc = np.mean(roc_macro)
-	return roc_auc
+    roc_macro = np.zeros(np.size(inference_label, 1))
+    for cl_i in range(np.size(inference_label, 1)):
+        roc_auc = sampled_auprc(inference_label[:, cl_i], inference_preds[:, cl_i])
+        roc_macro[cl_i] = roc_auc
+    roc_auc = np.mean(roc_macro)
+    return roc_auc
 
 
 def get_logger(logfile):
@@ -1178,8 +1182,8 @@ def get_logger(logfile):
 
 
 def find_gene_ind(genes, common_genes):
-	gid = []
-	for g in common_genes:
-		gid.append(np.where(genes == g)[0][0])
-	gid = np.array(gid)
-	return gid
+    gid = []
+    for g in common_genes:
+        gid.append(np.where(genes == g)[0][0])
+    gid = np.array(gid)
+    return gid
