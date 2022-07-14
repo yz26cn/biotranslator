@@ -17,7 +17,7 @@ import os
 
 
 # the path where you save the model
-save_model = './text_encoder.pth'
+save_model = './model/text_encoder.pth'
 # the path where you store the data
 graphine_repo = './data/Graphine/dataset/'
 
