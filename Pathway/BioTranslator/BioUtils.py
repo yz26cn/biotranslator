@@ -21,7 +21,8 @@ from gensim.models.word2vec import Word2Vec
 import torchvision.transforms as transforms
 from transformers import AutoTokenizer, AutoModel
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
-
+import nltk
+nltk.download('punkt')
 
 def save_obj(obj, name):
     with open(name, 'wb') as f:
@@ -164,9 +165,9 @@ def get_logger(logfile):
     return logger
 
 
-def RandomWalkRestart(A, rst_prob, delta=1e-4, reset=None, max_iter=50, use_torch=False, return_torch=False):
+def RandomWalkRestart(A, rst_prob, delta = 1e-4, reset=None, max_iter=50,use_torch=False,return_torch=False):
     if use_torch:
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        device = torch.device("cuda:0")
     nnode = A.shape[0]
     if reset is None:
         reset = np.eye(nnode)
@@ -219,10 +220,10 @@ def renorm(X):
 def DCA_vector(Q, dim):
     nnode = Q.shape[0]
     alpha = 1. / (nnode **2)
-    Q = np.log(Q + alpha) - np.log(alpha)
+    Q = np.log(Q + alpha) - np.log(alpha);
 
     #Q = Q * Q';
-    [U, S, V] = svds(Q, dim)
+    [U, S, V] = svds(Q, dim);
     S = np.diag(S)
     X = np.dot(U, np.sqrt(S))
     Y = np.dot(np.sqrt(S), V)
@@ -500,8 +501,7 @@ def get_clusDCA_emb(cfg):
         lKeys, length = list(length.keys()), list(length.values())
         G_distance.loc[node, lKeys] = length
     adjacent_GO = np.asarray(G_distance)
-    sp = RandomWalkRestart(adjacent_GO, 0.8, use_torch=True, return_torch=True)
-    print("finish rwr")
+    sp = RandomWalkRestart(adjacent_GO, 0.8)
     network_npy = DCA_vector(sp, dim=500)[0]
     rank_e = np.linalg.matrix_rank(network_npy)
     print('Rank of your embeddings is {}'.format(rank_e))
@@ -577,14 +577,14 @@ def term2preds_label(preds, label, terms, terms2id):
     return new_preds, new_label
 
 
-def organize_workingspace(workingspace, task='zero_shot'):
+def organize_workingspace(workingspace):
     '''
     Make sure that the working space include the zero shot folder, few shot folder,
     model folder, training log folder and results folder
     :param workingspace:
     :return:
     '''
-    task_path = workingspace + task
+    task_path = workingspace
     model_path = task_path + '/model'
     logger_path = task_path + '/log'
     results_path = task_path + '/results'
@@ -694,4 +694,48 @@ def compute_blast_preds(diamond_scores,
     return blast_preds
 
 
+def extract_terms_from_dataset(dataset):
+    id = 0
+    terms2id = collections.OrderedDict()
+    id2terms = collections.OrderedDict()
+    for i in dataset.index:
+        annts = dataset.iloc[i]['annotations']
+        for annt in annts:
+            if annt not in terms2id:
+                terms2id[annt] = id
+                id2terms[id] = annt
+                id += 1
+    return terms2id, id2terms
 
+
+def coef_vec(A, B):
+    coefs_array = []
+    for i in range(np.size(A, 0)):
+        a1 = A[i, :]
+        b1 = B[i, :]
+        coefs = np.corrcoef(a1, b1)[0, 1]
+        coefs_array.append(coefs)
+    return np.asarray(coefs_array)
+
+
+def sample_edges(st=0, ed=1000, n=100, exclude_edges=[]):
+    samples = []
+    while True:
+        nodes = np.arange(st, ed)
+        np.random.shuffle(nodes)
+        edge = list(nodes[0: 2])
+        if edge not in exclude_edges and edge not in samples:
+            samples.append(edge)
+        if len(samples) == n:
+            break
+    return np.asarray(samples)
+
+
+def edge_probability(encodings_i, encodings_j, text_encodings_p):
+    s1 = np.dot(encodings_i, np.transpose(text_encodings_p))
+    s1 = 1 / (1 + np.exp(-s1))
+    s2 = np.dot(encodings_j, np.transpose(text_encodings_p))
+    s2 = 1 / (1 + np.exp(-s2))
+    s3 = coef_vec(encodings_i, encodings_j)
+    score = s3 * (0.5 * s1.squeeze() + 0.5 * s2.squeeze())
+    return score

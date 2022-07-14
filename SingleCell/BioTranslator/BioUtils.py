@@ -32,6 +32,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics.pairwise import cosine_similarity
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 from scipy.sparse.csgraph._shortest_path import shortest_path
+# from sklearn.utils.graph_shortest_path import graph_shortest_path
 from sklearn.metrics import auc, average_precision_score, precision_recall_curve
 
 
@@ -302,10 +303,11 @@ def RandomWalkRestart(A, rst_prob, delta=1e-4, reset=None, max_iter=50, use_torc
 def DCA_vector(Q, dim):
     nnode = Q.shape[0]
     alpha = 1. / (nnode ** 2)
-    Q = np.log(Q + alpha) - np.log(alpha);
+    Q = np.log(Q + alpha) - np.log(alpha)
 
     # Q = Q * Q';
-    [U, S, V] = svds(Q, dim);
+    print("dim: ", dim)
+    [U, S, V] = svds(Q, dim)
     S = np.diag(S)
     X = np.dot(U, np.sqrt(S))
     Y = np.dot(np.sqrt(S), V)
@@ -336,6 +338,8 @@ def graph_embedding_dca(A, i2l, mi=0, dim=20, unseen_l=None):
     sp = sp[seen_ind, :]
     sp = sp[:, seen_ind]
     X = np.zeros((np.shape(sp)[0], dim))
+    print("dim: ", np.shape(sp)[0] - 1)
+    print("dim0: ", dim)
     svd_dim = min(dim, np.shape(sp)[0] - 1)
     if mi == 0 or mi == 2:
         print('please set mi=3')
