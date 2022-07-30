@@ -7,7 +7,7 @@ from .BioUtils import extract_terms_from_dataset
 from .BioUtils import load, load_obj, proteinData, emb2tensor, gen_go_emb, organize_workingspace, term_training_numbers
 
 
-class BioLoader:
+class PathwayBioLoader:
     '''
     This class loads and stores the data we used in BioTranslator
     '''

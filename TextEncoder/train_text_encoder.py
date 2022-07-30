@@ -153,8 +153,7 @@ test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
 
 
 def compute_corrcoef(x, y):
-    """Spearman
-    """
+    """Spearman"""
     return scipy.stats.spearmanr(x, y).correlation
 
 
@@ -191,7 +190,6 @@ def test(test_data, model):
 def train(dataloader, model, optimizer, save_path):
     model.train()
     size = len(dataloader.dataset)
-    max_corrcoef = 0
     for batch, data in tqdm(enumerate(dataloader)):
         input_ids = data['input_ids'].view(len(data['input_ids']) * 2, -1).to(device)
         attention_mask = data['attention_mask'].view(len(data['attention_mask']) * 2, -1).to(device)

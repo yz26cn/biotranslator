@@ -2,6 +2,7 @@ import os
 import collections
 import numpy as np
 import pandas as pd
+from .BioConfig import BioConfig
 from tqdm import tqdm
 from .BioUtils import load, load_obj, proteinData, \
     emb2tensor, gen_go_emb, organize_workingspace, term_training_numbers
@@ -12,7 +13,7 @@ class BioLoader:
     This class loads and stores the data we used in BioTranslator
     """
 
-    def __init__(self, cfg):
+    def __init__(self, cfg: BioConfig):
         # Organize the working space
         organize_workingspace(cfg.working_space, cfg.task)
         # load gene ontology data
@@ -29,7 +30,7 @@ class BioLoader:
         self.load_text_emb(cfg)
         print('Data Loading Finished!')
 
-    def load_terms(self, terms_file):
+    def load_terms(self, terms_file: str):
         terms = pd.read_pickle(terms_file)
         self.i2terms = list(terms['terms'])
         go_terms = list(self.go_data.keys())
@@ -41,7 +42,7 @@ class BioLoader:
         for i, term in enumerate(self.i2terms):
             self.terms2i[term] = i
 
-    def load_dataset(self, cfg):
+    def load_dataset(self, cfg: BioConfig):
         self.k_fold = cfg.k_fold
         self.fold_train, self.fold_val = self.load_fold_data(cfg.k_fold,
                                                              cfg.train_fold_file,
@@ -50,14 +51,14 @@ class BioLoader:
         self.network_dim = np.size(list(self.prot_network.values())[0])
         self.prot_description = load_obj(cfg.prot_description_file)
 
-    def load_fold_data(self, k, train_fold_file, validation_fold_file):
+    def load_fold_data(self, k_fold: int, train_fold_file: str, validation_fold_file: str):
         train_fold, val_fold = [], []
-        for i in range(k):
+        for i in range(k_fold):
             train_fold.append(pd.read_pickle(train_fold_file).format(i))
             val_fold.append(pd.read_pickle(validation_fold_file).format(i))
         return train_fold, val_fold
 
-    def register_task(self, cfg):
+    def register_task(self, cfg: BioConfig):
         if cfg.task == 'zero_shot':
             self.fold_zero_shot_terms_list = self.zero_shot_terms(cfg)
             self.zero_shot_fold_data(self.fold_zero_shot_terms_list)
@@ -68,13 +69,13 @@ class BioLoader:
             self.fold_few_shot_terms_list = self.few_shot_terms(cfg)
             self.diamond_list = self.load_diamond_score(cfg)
 
-    def zero_shot_terms(self, cfg):
+    def zero_shot_terms(self, cfg: BioConfig):
         fold_zero_shot_terms = []
         for i in tqdm(range(cfg.k_fold)):
             fold_zero_shot_terms.append(load_obj(cfg.zero_shot_term_path.format(i)))
         return fold_zero_shot_terms
 
-    def zero_shot_fold_data(self, fold_zero_shot_terms_list):
+    def zero_shot_fold_data(self, fold_zero_shot_terms_list: list):
         for i in range(self.k_fold):
             zero_terms_k = fold_zero_shot_terms_list[i]
             training, _ = self.fold_train[i], self.fold_val[i]
@@ -86,7 +87,7 @@ class BioLoader:
                     drop_index.append(j)
             self.fold_train[i] = training.drop(index=drop_index)
 
-    def few_shot_terms(self, cfg):
+    def few_shot_terms(self, cfg: BioConfig):
         fold_few_shot_terms = []
         for i in tqdm(range(cfg.k_fold)):
             few_shot_terms = collections.OrderedDict()
@@ -97,7 +98,7 @@ class BioLoader:
             fold_few_shot_terms.append(few_shot_terms)
         return fold_few_shot_terms
 
-    def load_diamond_score(self, cfg):
+    def load_diamond_score(self, cfg: BioConfig):
         diamond_list = []
         for i in range(cfg.k_fold):
             diamond_scores = {}
@@ -110,7 +111,7 @@ class BioLoader:
             diamond_list.append(diamond_scores)
         return diamond_list
 
-    def gen_protein_data(self, cfg):
+    def gen_protein_data(self, cfg: BioConfig):
         # generate protein data which can be loaded by torch
         # the raw train and test data is for blast function in BioTrainer
         self.raw_train, self.raw_val = [], []
@@ -124,7 +125,7 @@ class BioLoader:
                                                 self.terms2i, self.prot_network,
                                                 self.prot_description, gpu_ids=cfg.gpu_ids)
 
-    def load_text_emb(self, cfg):
+    def load_text_emb(self, cfg: BioConfig):
         if not os.path.exists(cfg.emb_path):
             os.mkdir(cfg.emb_path)
             print(f'Warning: We created the embedding folder: {cfg.emb_path}')

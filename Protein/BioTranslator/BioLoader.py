@@ -6,7 +6,7 @@ from tqdm import tqdm
 from .BioUtils import load, load_obj, proteinData, emb2tensor, gen_go_emb, organize_workingspace, term_training_numbers
 
 
-class BioLoader:
+class ProteinBioLoader:
     '''
     This class loads and stores the data we used in BioTranslator
     '''

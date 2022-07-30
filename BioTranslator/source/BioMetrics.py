@@ -5,14 +5,14 @@ import numpy as np
 from sklearn.metrics import roc_curve, auc
 
 
-def compute_roc(labels, preds):
+def compute_roc(labels: np.array, preds: np.array):
     """Compute ROC curve and ROC area for each class."""
     fpr, tpr, _ = roc_curve(labels.flatten(), preds.flatten())
     roc_auc = auc(fpr, tpr)
     return roc_auc
 
 
-def auroc_metrics(labels, preds):
+def auroc_metrics(labels: np.array, preds: np.array):
     roc_matrix = np.zeros(np.size(preds, 1))
     for i, _ in enumerate(roc_matrix):
         pred_i, label_i = preds[:, i], labels[:, i]

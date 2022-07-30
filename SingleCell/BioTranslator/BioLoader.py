@@ -7,7 +7,7 @@ from .BioUtils import gen_co_emb, emb2tensor, cellData, SplitTrainTest, find_gen
 from .BioUtils import organize_workingspace, DataProcessing, read_data, read_data_file, read_ontology_file
 
 
-class BioLoader:
+class CellBioLoader:
     '''
     This class loads and stores the data we used in BioTranslator
     '''
