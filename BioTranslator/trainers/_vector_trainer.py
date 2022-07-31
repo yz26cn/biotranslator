@@ -3,31 +3,23 @@ import torch
 import collections
 import numpy as np
 from tqdm import tqdm
-from .BioConfig import BioConfig
-from .BioLoader import BioLoader
-from .BioModel import BioTranslator
-from .BioMetrics import auroc_metrics
+from ..non_text_encoder import VecTranslator
 from torch.utils.data import DataLoader
-from .BioUtils import save_obj, load_obj, get_logger
-from .BioUtils import evaluate_auroc, evaluate_unseen_auroc, evaluate_auprc, evaluate_unseen_auprc
+from ..utils import save_obj, load_obj, get_logger, evaluate_auroc, evaluate_unseen_auroc, evaluate_auprc, evaluate_unseen_auprc
 
+class VecTrainer:
 
-class BioTrainer:
-
-    def __init__(self):
-        '''
+    def __init__(self, files, cfg):
+        """
         This class mainly include the training of BioTranslator Model
         :param files:
-        '''
+        """
 
-    def setup_model(self, files: BioLoader, cfg: BioConfig):
-        if cfg.method == 'BioTranslator':
-            cfg.expr_dim = files.ngene
-            self.model = BioTranslator(cfg)
-        else:
-            print('Warnings: No such method to setup the model!')
+    def setup_model(self, files, cfg):
+        cfg.expr_dim = files.ngene
+        self.model = VecTranslator(cfg)
 
-    def setup_training(self, cfg: BioConfig):
+    def setup_training(self, cfg):
         # train epochs
         self.epoch = cfg.epoch
         # loss function
@@ -43,7 +35,7 @@ class BioTrainer:
         self.optimizer.step()
         return self.loss.item()
 
-    def train(self, files: BioLoader, cfg: BioConfig):
+    def train(self, files, cfg):
         # store the results of each fold in one list
         results_cache = collections.OrderedDict()
         results_var = ['unseen_auroc', 'auroc', 'unseen_auprc', 'auprc']
@@ -128,10 +120,3 @@ class BioTrainer:
 
         # save the results
         save_obj(results_cache, cfg.results_name)
-
-
-
-
-
-
-

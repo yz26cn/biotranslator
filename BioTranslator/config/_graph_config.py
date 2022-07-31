@@ -74,23 +74,3 @@ class GraphConfig:
         self.emb_name = '{}_go_embeddings.pkl'.format(self.method)
         # get the path of pathway textual description embeddings
         self.pathway_emb_file = self.data_repo + self.pathway_dataset + '/pathway_embeddings.pkl'
-
-# def graph_config():
-#     cfg = {'method': 'BioTranslator',
-#            'pathway_dataset': 'KEGG',
-#            'train_dataset': 'GOA_Human',
-#            'exclude_dataset': 'Reactome',
-#            'data_repo': './data/ProteinDataset/',
-#            'encoder_path': '../TextEncoder/Encoder/encoder.pth',
-#            'emb_path': 'embeddings/',
-#            'working_space': 'working_space/',
-#            'save_path': 'results/',
-#            'max_length': 2000,
-#            'hidden_dim': 1500,
-#            'features': 'seqs, description, network',
-#            'lr': 0.0003,
-#            'epoch': 30,
-#            'batch_size': 32,
-#            'gpu_ids': '1'}
-#     gc = GraphConfig(cfg)
-#     return gc

@@ -3,44 +3,26 @@ import torch
 import collections
 import numpy as np
 from tqdm import tqdm
-from .BioConfig import BioConfig
-from .BioLoader import BioLoader
-from .BioMetrics import auroc_metrics
 from torch.utils.data import DataLoader
-from .BioModel import BioTranslator, BaseModel, DeepGOPlus
-from .BioUtils import term2preds_label, get_logger, get_namespace_terms
-from .BioUtils import get_few_shot_namespace_terms, save_obj, compute_blast_preds, load_obj
+from ..metrics import auroc_metrics
+from ..non_text_encoder import SeqTranslator
+from ..utils import term2preds_label, get_logger, get_namespace_terms, get_few_shot_namespace_terms, save_obj, compute_blast_preds, load_obj
 
 
-class BioTrainer:
+class SeqTrainer:
 
-    def __init__(self, files: BioLoader, cfg: BioConfig):
-        '''
+    def __init__(self, files, cfg):
+        """
         This class mainly include the training of BioTranslator Model
         :param files:
-        '''
+        """
         # pass the dataset details to the config class
         cfg.network_dim = files.network_dim
 
-    def setup_model(self, files: BioLoader, cfg: BioConfig):
-        if cfg.method == 'BioTranslator':
-            self.model = BioTranslator(cfg)
-        elif cfg.method == 'ProTranslator':
-            self.model = BaseModel(cfg)
-        elif cfg.method == 'TFIDF':
-            self.model = BaseModel(cfg)
-        elif cfg.method == 'clusDCA':
-            self.model = BaseModel(cfg)
-        elif cfg.method == 'Word2Vec':
-            self.model = BaseModel(cfg)
-        elif cfg.method == 'Doc2Vec':
-            self.model = BaseModel(cfg)
-        elif cfg.method == 'DeepGOPlus':
-            self.model = DeepGOPlus(cfg, files.n_classes)
-        else:
-            print('Warnings: No such method to setup the model!')
+    def setup_model(self, cfg):
+        self.model = SeqTranslator(cfg)
 
-    def setup_training(self, files: BioLoader, cfg: BioConfig):
+    def setup_training(self, files, cfg):
         # train epochs
         self.epoch = cfg.epoch
         # loss function
@@ -59,7 +41,7 @@ class BioTrainer:
         self.optimizer.step()
         return self.loss.item()
 
-    def train(self, files: BioLoader, cfg: BioConfig):
+    def train(self, files, cfg):
         # store the results of each fold in one list
         results_list = []
         if cfg.task == 'few_shot':
@@ -70,7 +52,7 @@ class BioTrainer:
             print('Start Cross-Validation Fold :{} ...'.format(fold_i))
 
             # setup the model architecture according the methods
-            self.setup_model(files, cfg)
+            self.setup_model(cfg)
             # setup dataset, the training loss and optimizer
             self.setup_training(files, cfg)
 
@@ -170,10 +152,3 @@ class BioTrainer:
         save_obj(results_list, cfg.results_name)
         if cfg.task == 'few_shot':
             save_obj(with_blast_res_list, cfg.blast_res_name)
-
-
-
-
-
-
-

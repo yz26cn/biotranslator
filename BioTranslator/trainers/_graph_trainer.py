@@ -3,18 +3,15 @@ import torch
 import collections
 import numpy as np
 from tqdm import tqdm
-from .BioConfig import BioConfig
-from .BioLoader import BioLoader
 from torch.utils.data import DataLoader
-from .BioMetrics import compute_roc, micro_auroc
-from .BioModel import BioTranslator, BaseModel, DeepGOPlus
-from .BioUtils import sample_edges, get_logger, edge_probability
-from .BioUtils import get_few_shot_namespace_terms, save_obj, compute_blast_preds, load_obj
+from ..metrics import compute_roc, micro_auroc
+from ..non_text_encoder import GraphTranslator
+from ..utils import sample_edges, get_logger, edge_probability, get_few_shot_namespace_terms, save_obj, compute_blast_preds, load_obj
 
 
-class BioTrainer:
+class GraphTrainer:
 
-    def __init__(self, files: BioLoader, cfg: BioConfig):
+    def __init__(self, files, cfg):
         """
         This class mainly include the training of BioTranslator Model
         :param files:
@@ -22,25 +19,10 @@ class BioTrainer:
         # pass the dataset details to the config class
         cfg.network_dim = files.network_dim
 
-    def setup_model(self, files: BioLoader, cfg: BioConfig):
-        if cfg.method == 'BioTranslator':
-            self.model = BioTranslator(cfg)
-        elif cfg.method == 'ProTranslator':
-            self.model = BaseModel(cfg)
-        elif cfg.method == 'TFIDF':
-            self.model = BaseModel(cfg)
-        elif cfg.method == 'clusDCA':
-            self.model = BaseModel(cfg)
-        elif cfg.method == 'Word2Vec':
-            self.model = BaseModel(cfg)
-        elif cfg.method == 'Doc2Vec':
-            self.model = BaseModel(cfg)
-        elif cfg.method == 'DeepGOPlus':
-            self.model = DeepGOPlus(cfg, files.n_classes)
-        else:
-            print('Warnings: No such method to setup the model!')
+    def setup_model(self, cfg):
+        self.model = GraphTranslator(cfg)
 
-    def setup_training(self, files: BioLoader, cfg: BioConfig):
+    def setup_training(self, files, cfg):
         # train epochs
         self.epoch = cfg.epoch
         # loss function
@@ -59,7 +41,7 @@ class BioTrainer:
         self.optimizer.step()
         return self.loss.item()
 
-    def train(self, files: BioLoader, cfg: BioConfig):
+    def train(self, files, cfg):
         # store the results of pathway prediction
         node_link_auroc = collections.OrderedDict()
         # record the performance of our model
@@ -68,7 +50,7 @@ class BioTrainer:
         print('Start training model on :{} ...'.format(cfg.dataset))
 
         # setup the model architecture according the methods
-        self.setup_model(files, cfg)
+        self.setup_model(cfg)
         # setup dataset, the training loss and optimizer
         self.setup_training(files, cfg)
 
@@ -121,7 +103,7 @@ class BioTrainer:
         for i in range(len(auroc)):
             node_link_auroc[files.eval_i2terms[i]] = [auroc[i]]
 
-        self.logger.info('Pathway: {} Node Classification AUROC: {}'.format(cfg.pathway_dataset, np.mean(auroc)))
+        self.logger.info(f'Pathway: {cfg.pathway_dataset} Node Classification AUROC: {np.mean(auroc)}')
 
         # evaluate the performance of BioTranslator on edge prediction
         pathway_dir = cfg.data_repo + cfg.pathway_dataset + '/'
@@ -140,7 +122,8 @@ class BioTrainer:
 
                 # convert edges from uniprot to index
                 for e in range(len(edges)):
-                    if edges[e][0] not in uniprot2index.keys() or edges[e][1] not in uniprot2index.keys():
+                    if edges[e][0] not in uniprot2index.keys()\
+                            or edges[e][1] not in uniprot2index.keys():
                         continue
                     edges_id.append([uniprot2index[edges[e][0]], uniprot2index[edges[e][1]]])
                 if len(edges_id) == 0:
@@ -149,7 +132,8 @@ class BioTrainer:
                 true_edges = np.asarray(edges_id)
 
                 # predict edges
-                encodings_i, encodings_j = data_encodings[true_edges[:, 0], :], data_encodings[true_edges[:, 1], :]
+                encodings_i = data_encodings[true_edges[:, 0], :]
+                encodings_j = data_encodings[true_edges[:, 1], :]
                 text_encodings_p = pathway_encodings[files.eval_terms2i[p_id]] / np.sqrt(
                     np.sum(np.square(pathway_encodings[files.eval_terms2i[p_id]].squeeze())))
                 text_encodings_p = text_encodings_p.reshape([1, -1])
@@ -167,17 +151,9 @@ class BioTrainer:
                 edge_auroc = compute_roc(np.asarray(edge_label), np.asarray(edge_prediction))
                 graph_auroc.append(edge_auroc)
                 node_link_auroc[p_id].append(edge_auroc)
-            self.logger.info('Pathway: {} Edge Prediction AUROC: {}'.format(cfg.pathway_dataset, np.mean(graph_auroc)))
+            self.logger.info(f'Pathway: {cfg.pathway_dataset} Edge Prediction AUROC: {np.mean(graph_auroc)}')
 
         # save the results
         save_obj(node_link_auroc, cfg.results_name)
         # save the model
         torch.save(self.model, cfg.save_model_path.format(cfg.method, cfg.pathway_dataset))
-
-
-
-
-
-
-
-

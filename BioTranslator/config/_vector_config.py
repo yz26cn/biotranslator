@@ -57,25 +57,3 @@ class VectorConfig:
             self.results_name = self.working_space + '{}/'.format(self.task) + 'results/{}_{}_{}.pkl'.format(self.method,
                                                                                                           self.dataset,
                                                                                                           self.eval_dataset)
-
-# def vector_config():
-#     # choose the parameters we need
-#     cfg = {'method': 'BioTranslator',
-#            'dataset': 'muris_droplet',
-#            'eval_dataset': 'muris_facs',
-#            'task': 'cross_dataset',
-#            'excludes': 'Reactome',
-#            'data_repo': './data/sc_data/',
-#            'ontology_repo': './data/Ontology_data/',
-#            'encoder_path': '../TextEncoder/Encoder/text_encoder.pth',
-#            'emb_path': 'embeddings/',
-#            'working_space': 'working_space/',
-#            'save_path': 'results/',
-#            'hidden_dim': 30,
-#            'features': 'seqs, description, network',
-#            'lr': 0.0001,
-#            'epoch': 15,
-#            'batch_size': 128,
-#            'gpu_ids': '1'}
-#     vc = VectorConfig(cfg)
-#     return vc

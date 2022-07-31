@@ -11,11 +11,12 @@ from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer, AutoModel, AutoConfig
 import scipy.stats
 import numpy as np
-from .emb_loaders import vector_encoder, sequence_encoder, graph_encoder
+from .emb_loaders import GraphLoader, VecLoader, SeqLoader
 from .text_encoder import TestOntologyDataset, TrainOntologyDataset, NeuralNetwork, get_data, train
 from .config import config
 from .utils import load, save_obj
 from .non_text_encoder import GraphTranslator, SeqTranslator, VecTranslator
+from .trainers import GraphTrainer, SeqTrainer, VecTrainer
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -160,6 +161,7 @@ class SequenceEncoder(SeqTranslator):
     """
     Embed the sequence features into the low dimensional space
     """
+
     def __init__(self, cfg):
         super(SequenceEncoder, self).__init__(cfg)
 
@@ -217,21 +219,45 @@ def train_biotranslator(type2cfg: dict):
         List of non-text data encoders
     """
     EncoderList = []
-
+    LoaderList = []
+    TrainerDict = []
     for tp in type2cfg.keys():
+        cfg = type2cfg[tp]
         if tp == 'Sequence':
-            EncoderList.append(SequenceEncoder(type2cfg[tp]))
-        if tp == 'Vector':
-            EncoderList.append(VectorEncoder(type2cfg[tp]))
-        if tp == 'Graph':
-            EncoderList.append(GraphEncoder(type2cfg[tp]))
+            # EncoderList.append(SequenceEncoder(type2cfg[tp]))
+            files = sequence_encoder(cfg)
+            TrainerDict[tp] = (SeqTrainer(files, cfg), files, cfg)
+        elif tp == 'Vector':
+            # EncoderList.append(VectorEncoder(type2cfg[tp]))
+            files = vector_encoder(cfg)
+            TrainerDict[tp] = (VecTrainer(files, cfg), files, cfg)
+        elif tp == 'Graph':
+            # EncoderList.append(GraphEncoder(type2cfg[tp]))
+            files = graph_encoder(cfg)
+            TrainerDict[tp] = (GraphTrainer(files, cfg), files, cfg)
+        else:
+            logging.info('Data type is not supported yet.')
+    for key, tup in TrainerDict.items():
+        tup[0].train(tup[1], tup[2])
 
 
 def test_biotranslator(data_dir, data_types, model_path, text_emb):
     """
     Annotate the proteins with textual description embeddings
-    :param data_dir:
-    :param model_path:
-    :return:
+
+    Parameters
+    ----------
+    data_dir
+        Input data path.
+    data_types
+        ['Sequence', 'Vector', 'Graph', ...]
+    cfgs
+        [config1, config2, config3, ...]
+    text_emb
+        Text embedding path.
+    model_path
+        Where you save the model.
+
+    Returns
+    -------
     """
-    raise NotImplementedError
