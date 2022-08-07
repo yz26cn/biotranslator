@@ -13,7 +13,7 @@ authors = [
     {name = "Sheng Wang"}
 ]
 maintainers = [
-    {name = "Hanwen Xu", email = "xuhw@cs.washington.edm"},
+    {name = "Hanwen Xu", email = "xuhw@cs.washington.edu"},
     {name = "Yunwei Zhao", email = "yzhao4@cs.washington.edu"},
 ]
 readme = {file = "README.md", content-type="text/markdown"}
@@ -46,6 +46,10 @@ dependencies = [
     "torchvision==0.8.2",
 ]
 [project.urls]
-Source = "https://github.com/ywzhao2002/BioTranslatorProject-master"
+Documentation = "https://biotranslator.readthedocs.io/en/latest/"
+Source = "https://github.com/HanwenXuTHU/BioTranslatorProject"
 
 [project.scripts]
+
+[tool.flit.module]
+name = "biotranslator"

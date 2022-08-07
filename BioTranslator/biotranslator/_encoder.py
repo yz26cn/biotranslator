@@ -1,18 +1,6 @@
-# -*- coding: utf-8 -*-
-import itertools
-import numpy as np
-from torch import nn
-from torch.nn import init
-from transformers import AutoTokenizer, AutoModel
-import torch
-import collections
-
-
-# BioTranslator Model
-class VecDataEncoder(nn.Module):
-
+class BioDataEncoder(nn.Module):
     def __init__(self,
-                 feature=['seqs', 'network', 'description', 'expression'],
+                 feature=None,
                  hidden_dim=1000,
                  seq_input_nc=4,
                  seq_in_nc=512,
@@ -23,15 +11,9 @@ class VecDataEncoder(nn.Module):
                  expression_dim=1000,
                  drop_out=0.01,
                  text_dim=768):
-        """
-
-        :param seq_input_nc:
-        :param seq_in_nc:
-        :param seq_max_kernels:
-        :param dense_num:
-        :param seq_length:
-        """
-        super(VecDataEncoder, self).__init__()
+        super(BioDataEncoder, self).__init__()
+        if feature is None:
+            feature = ['seqs', 'network', 'description', 'expression']
         self.feature = feature
         self.text_dim = text_dim
         if 'seqs' in self.feature:
@@ -41,7 +23,7 @@ class VecDataEncoder(nn.Module):
             for i in range(len(kernels)):
                 exec("self.conv1d_{} = nn.Conv1d(in_channels=seq_input_nc, out_channels=seq_in_nc, kernel_size=kernels[i], padding=0, stride=1)".format(i))
                 exec("self.pool1d_{} = nn.MaxPool1d(kernel_size=seq_length - kernels[i] + 1, stride=1)".format(i))
-            self.fc_seq =[nn.Linear(len(kernels)*seq_in_nc, hidden_dim), nn.LeakyReLU(inplace=True)]
+            self.fc_seq = [nn.Linear(len(kernels) * seq_in_nc, hidden_dim), nn.LeakyReLU(inplace=True)]
             self.fc_seq = nn.Sequential(*self.fc_seq)
         if 'description' in self.feature:
             self.fc_description = [nn.Linear(description_dim, hidden_dim), nn.LeakyReLU(inplace=True)]
@@ -52,7 +34,7 @@ class VecDataEncoder(nn.Module):
         if 'expression' in self.feature:
             self.fc_expr = [nn.Linear(expression_dim, hidden_dim), nn.ReLU(inplace=True), nn.Dropout(p=drop_out)]
             self.fc_expr = nn.Sequential(*self.fc_expr)
-        self.cat2emb = nn.Linear(len(self.feature)*hidden_dim, text_dim)
+        self.cat2emb = nn.Linear(len(self.feature) * hidden_dim, text_dim)
 
     def forward(self, x=None, x_description=None, x_vector=None, x_expr=None):
         x_list = []
@@ -74,65 +56,53 @@ class VecDataEncoder(nn.Module):
                 x_enc = features[self.feature[0]]
             else:
                 x_enc = torch.cat((x_enc, features[self.feature[i]]), dim=1)
-        #x_enc = torch.nn.functional.normalize(x_cat, p=2, dim=1)
+        # x_enc = torch.nn.functional.normalize(x_cat, p=2, dim=1)
         return self.cat2emb(x_enc)
 
 
-class VecTranslator(nn.Module):
-
+class BioTranslator(nn.Module):
     def __init__(self, cfg):
-        super(VecTranslator, self).__init__()
+        super(BioDataTranslator, self).__init__()
         self.loss_func = torch.nn.BCELoss()
-        self.data_encoder = VecDataEncoder(feature=cfg.features,
-                                           hidden_dim=cfg.hidden_dim,
-                                           expression_dim=cfg.expr_dim,
-                                           drop_out=cfg.drop_out,
-                                           text_dim=cfg.term_enc_dim)
-        self.activation = torch.nn.Softmax(dim=1)
+        self.data_encoder = BioDataEncoder(feature=cfg.features,
+                                        hidden_dim=cfg.hidden_dim,
+                                        seq_input_nc=cfg.seq_input_nc,
+                                        seq_in_nc=cfg.seq_in_nc,
+                                        seq_max_kernels=cfg.seq_max_kernels,
+                                        network_dim=cfg.network_dim,
+                                        seq_length=cfg.max_length,
+                                        expression_dim=cfg.expr_dim,
+                                        drop_out=cfg.drop_out,
+                                        text_dim=cfg.term_enc_dim)
+        if cfg.data_type == "seq" or cfg.data_type == "seq":
+            self.activation = torch.nn.Sigmoid()
+            # self.text_encoder = torch.load(model_config.text_encoder)
+            self.temperature = torch.tensor(0.07, requires_grad=True)
+        elif cfg.data_type == "vec":
+            self.activation = torch.nn.Softmax(dim=1)
+        else:
+            raise NotImplementedError
+
         self.text_dim = cfg.term_enc_dim
         self.init_weights(self.data_encoder, init_type='xavier')
         if len(cfg.gpu_ids) > 0:
             self.data_encoder = self.data_encoder.to('cuda')
+            self.temperature = self.temperature.to('cuda')
             self.activation = self.activation.to('cuda')
 
-    def forward(self, input_expr, texts):
+    def forward(self, input_seq, input_description, input_vector, input_expr, texts):
         # get textual description encodings
         text_encodings = texts.permute(1, 0)
         # get biology instance encodings
-        data_encodings = self.data_encoder(x_expr=input_expr)
+        if secfg.data_type == "seq" or cfg.data_type == "seq""graph":
+            data_encodings = self.data_encoder(x=input_seq,
+                                               input_description=input_description,
+                                               input_vector=input_vector)
+        elif cfg.data_type == "vec":
+            data_encodings = self.data_encoder(x_expr=input_expr)
+        else:
+            raise NotImplementedError
+
         # compute logits
         logits = torch.matmul(data_encodings, text_encodings)
         return self.activation(logits)
-
-    def init_weights(self, net, init_type='normal', init_gain=0.02):
-        """Initialize network weights.
-        Parameters:
-            net (network)   -- network to be initialized
-            init_type (str) -- the name of an initialization method: normal | xavier | kaiming | orthogonal
-            init_gain (float)    -- scaling factor for normal, xavier and orthogonal.
-        We use 'normal' in the original pix2pix and CycleGAN paper. But xavier and kaiming might
-        work better for some applications. Feel free to try yourself.
-        """
-
-        def init_func(m):  # define the initialization function
-            classname = m.__class__.__name__
-            if hasattr(m, 'weight') and (classname.find('Conv') != -1 or classname.find('Linear') != -1):
-                if init_type == 'normal':
-                    init.normal_(m.weight.data, 0.0, init_gain)
-                elif init_type == 'xavier':
-                    init.xavier_normal_(m.weight.data, gain=init_gain)
-                elif init_type == 'kaiming':
-                    init.kaiming_normal_(m.weight.data, a=0, mode='fan_in')
-                elif init_type == 'orthogonal':
-                    init.orthogonal_(m.weight.data, gain=init_gain)
-                else:
-                    raise NotImplementedError('initialization method [%s] is not implemented' % init_type)
-                if hasattr(m, 'bias') and m.bias is not None:
-                    init.constant_(m.bias.data, 0.0)
-            elif classname.find(
-                    'BatchNorm2d') != -1:  # BatchNorm Layer's weight is not a matrix; only normal distribution applies.
-                init.normal_(m.weight.data, 1.0, init_gain)
-                init.constant_(m.bias.data, 0.0)
-
-        print('initialize network with %s' % init_type)
-        net.apply(init_func)

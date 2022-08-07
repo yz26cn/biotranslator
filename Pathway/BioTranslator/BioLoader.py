@@ -8,9 +8,9 @@ from .BioUtils import load, load_obj, proteinData, emb2tensor, gen_go_emb, organ
 
 
 class PathwayBioLoader:
-    '''
+    """
     This class loads and stores the data we used in BioTranslator
-    '''
+    """
     def __init__(self, cfg):
         # Organize the working space
         organize_workingspace(cfg.working_space)

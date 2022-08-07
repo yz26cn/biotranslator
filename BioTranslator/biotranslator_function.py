@@ -1,48 +1,49 @@
-import torch
 import os
 import json
+import torch
 import random
 import logging
 import collections
-from tqdm import tqdm
-import torch.nn as nn
-from torch.nn import functional as F
-from torch.utils.data import Dataset, DataLoader
-from transformers import AutoTokenizer, AutoModel, AutoConfig
 import scipy.stats
 import numpy as np
-from .emb_loaders import GraphLoader, VecLoader, SeqLoader
-from .text_encoder import TestOntologyDataset, TrainOntologyDataset, NeuralNetwork, get_data, train
+import torch.nn as nn
+from tqdm import tqdm
 from .config import config
+from .task import BioLoader
+from .trainer import build_trainer
 from .utils import load, save_obj
-from .non_text_encoder import GraphTranslator, SeqTranslator, VecTranslator
-from .trainers import GraphTrainer, SeqTrainer, VecTrainer
+from torch.nn import functional as F
+from .biotranslator import BioTranslator
+from .utils import NeuralNetwork as nn_bert
+from torch.utils.data import Dataset, DataLoader
+from .text_encoder import NeuralNetwork as nn_config
+from transformers import AutoTokenizer, AutoModel, AutoConfig
+from .text_encoder import TestOntologyDataset, TrainOntologyDataset, NeuralNetwork, get_data, train
+
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 
-def setup_config(data_type='Sequence', **kwargs):
+def setup_config(data_type='seq', **kwargs):
     args_names = {
-        'Sequence': [
-            'seq_dataset',
-            'seq_task',
-            'seq_max_length',
+        'seq': [
+            'task',
+            'max_length'
         ],
-        'Vector': [
-            'vec_dataset',
-            'vec_eval_dataset',
-            'vec_task',
+        'vec': [
+            'task',
+            'eval_dataset',
             'vec_ontology_repo'
         ],
-        'Graph': [
-            'graph_pathway_dataset',
-            'graph_dataset',
+        'graph': [
+            'max_length',
+            'eval_dataset',
             'graph_excludes',
-            'graph_max_length',
         ],
         'general': [
             'method',
             'data_repo',
+            'dataset',
             'encoder_path',
             'save_path',
             'emb_path',
@@ -66,7 +67,7 @@ def train_text_encoder(data_dir: str, save_dir: str):
     ----------
     data_dir
         the Ontologies dataset
-    save_dir
+    save_dir 
         where you save the model
     """
     save_path = f'{save_dir}/text_encoder.pth'
@@ -84,7 +85,7 @@ def train_text_encoder(data_dir: str, save_dir: str):
     max_len = 256
     print(f'Batch Size: {batch_size}, Max Length: {max_len}')
 
-    model = NeuralNetwork(bert_name, output_way, config).to(device)
+    model = nn_config(bert_name, output_way, config).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     train_texts, test_texts = get_data(data_dir)
 
@@ -134,7 +135,7 @@ def get_ontology_embeddings(cfg):
             texts.append(go_data[go_classes[i]]['name'] + '. ' + go_data[go_classes[i]]['def'][0])
 
     tokenizer = AutoTokenizer.from_pretrained('microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext')
-    model = NeuralNetwork('None', 'cls', bert_name)
+    model = nn_bert('None', 'cls', bert_name)
     model.load_state_dict(torch.load(cfg.encoder_path))
     model = model.to('cuda')
     model.eval()
@@ -157,33 +158,6 @@ def get_ontology_embeddings(cfg):
         save_obj(go_embeddings, cfg.emb_path + cfg.emb_name)
 
 
-class SequenceEncoder(SeqTranslator):
-    """
-    Embed the sequence features into the low dimensional space
-    """
-
-    def __init__(self, cfg):
-        super(SequenceEncoder, self).__init__(cfg)
-
-
-class VectorEncoder(VecTranslator):
-    """
-    Embed the Vector features (gene expression) into the low dimensional space
-    """
-
-    def __init__(self, cfg):
-        super(VectorEncoder, self).__init__(cfg)
-
-
-class GraphEncoder(GraphTranslator):
-    """
-    Embed the Graph features into the low dimensional space
-    """
-
-    def __init__(self, cfg):
-        super(GraphEncoder, self).__init__(cfg)
-
-
 def train_biotranslator(type2cfg: dict):
     """Train the BioTranslator
 
@@ -191,9 +165,9 @@ def train_biotranslator(type2cfg: dict):
     ----------
     type2cfg:
         {
-        'Sequence': config1
-        'Vector':, config2,
-        'Graph', config3,
+        'seq': config1
+        'vec':, config2,
+        'graph', config3,
         ...
         }
 
@@ -201,8 +175,6 @@ def train_biotranslator(type2cfg: dict):
         Input data path.
     data_types
         ['Sequence', 'Vector', 'Graph', ...]
-    cfgs
-        [config1, config2, config3, ...]
     text_emb
         Text embedding path.
     model_path
@@ -210,35 +182,31 @@ def train_biotranslator(type2cfg: dict):
     lr
         Learning rate.
     epoch
-
+        number of epoch
     batch_size
+        batch size
 
-    Return
+    Returns
     ------
-    EncoderList
-        List of non-text data encoders
+    encoder_list
+        List of trained translator
     """
-    EncoderList = []
-    LoaderList = []
-    TrainerDict = []
+    trainer_dict = collections.OrderedDict()
+    encoder_list = []
+    # We may only train one data type each time in this method
     for tp in type2cfg.keys():
         cfg = type2cfg[tp]
-        if tp == 'Sequence':
-            # EncoderList.append(SequenceEncoder(type2cfg[tp]))
-            files = sequence_encoder(cfg)
-            TrainerDict[tp] = (SeqTrainer(files, cfg), files, cfg)
-        elif tp == 'Vector':
-            # EncoderList.append(VectorEncoder(type2cfg[tp]))
-            files = vector_encoder(cfg)
-            TrainerDict[tp] = (VecTrainer(files, cfg), files, cfg)
-        elif tp == 'Graph':
-            # EncoderList.append(GraphEncoder(type2cfg[tp]))
-            files = graph_encoder(cfg)
-            TrainerDict[tp] = (GraphTrainer(files, cfg), files, cfg)
+        if tp in ['graph', 'seq', 'vec']:
+            files = BioLoader(cfg)
         else:
             logging.info('Data type is not supported yet.')
-    for key, tup in TrainerDict.items():
-        tup[0].train(tup[1], tup[2])
+            raise NotImplementedError
+        trainer_dict[tp] = (build_trainer(data_type=tp, files=files, cfg=cfg), file, cfg)
+    for key, trainer_tup in trainer_dict.items():
+        trainer = trainer_tup[0]
+        trainer.train(trainer_tup[1], trainer_tup[2])
+        encoder_list.append(trainer)
+    return encoder_list
 
 
 def test_biotranslator(data_dir, data_types, model_path, text_emb):
@@ -247,17 +215,13 @@ def test_biotranslator(data_dir, data_types, model_path, text_emb):
 
     Parameters
     ----------
-    data_dir
-        Input data path.
-    data_types
-        ['Sequence', 'Vector', 'Graph', ...]
-    cfgs
-        [config1, config2, config3, ...]
-    text_emb
-        Text embedding path.
-    model_path
-        Where you save the model.
+    data_dir: Input data path.
+    data_types: ['seq', 'vec', 'graph', ...]
+    cfgs: [config1, config2, config3, ...]
+    text_emb: Text embedding path.
+    model_path: Where you save the model.
 
     Returns
     -------
     """
+

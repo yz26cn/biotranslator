@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from ..metrics import compute_roc, micro_auroc
-from ..non_text_encoder import GraphTranslator
+from ..biotranslator import BioTranslator
 from ..utils import sample_edges, get_logger, edge_probability, get_few_shot_namespace_terms, save_obj, compute_blast_preds, load_obj
 
 
@@ -20,7 +20,7 @@ class GraphTrainer:
         cfg.network_dim = files.network_dim
 
     def setup_model(self, cfg):
-        self.model = GraphTranslator(cfg)
+        self.model = BioTranslator(cfg)
 
     def setup_training(self, files, cfg):
         # train epochs
