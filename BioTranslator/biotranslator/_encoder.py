@@ -94,7 +94,7 @@ class BioTranslator(nn.Module):
         # get textual description encodings
         text_encodings = texts.permute(1, 0)
         # get biology instance encodings
-        if secfg.data_type == "seq" or cfg.data_type == "seq""graph":
+        if secfg.data_type == "seq" or cfg.data_type == "graph":
             data_encodings = self.data_encoder(x=input_seq,
                                                input_description=input_description,
                                                input_vector=input_vector)
