@@ -2,6 +2,7 @@ import os
 import torch
 import collections
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from .BioConfig import BioConfig
 from .BioLoader import BioLoader
@@ -128,10 +129,3 @@ class BioTrainer:
 
         # save the results
         save_obj(results_cache, cfg.results_name)
-
-
-
-
-
-
-

@@ -21,7 +21,7 @@ if __name__ == '__main__':
     parser.add_argument('--task', type=str, default='few_shot', help='Choose between zero_shot task and few_shot task')
     # specify the dataset root dir
 
-    parser.add_argument('--data_repo', type=str, default='./data/ProteinDataset/', help='Where you store the potein dataset, this folder should contains GOA_Human, GOA_Mouse, GOA_Yeast, SwissProt, CAFA3 folder.')
+    parser.add_argument('--data_repo', type=str, default='./data/', help='Where you store the potein dataset, this folder should contains GOA_Human, GOA_Mouse, GOA_Yeast, SwissProt, CAFA3 folder.')
     # Specify the encoder model path, this model will be used only when you do not have embeddings in emb_path
     parser.add_argument('--encoder_path', type=str, default='../TextEncoder/Encoder/encoder.pth', help='The path of text encoder model')
     # please specify where you cache the go term embeddings

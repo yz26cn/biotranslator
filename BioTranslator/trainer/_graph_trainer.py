@@ -2,11 +2,12 @@ import os
 import torch
 import collections
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from ..metrics import compute_roc, micro_auroc
 from ..biotranslator import BioTranslator
-from ..utils import sample_edges, get_logger, edge_probability, get_few_shot_namespace_terms, save_obj, compute_blast_preds, load_obj
+from ..utils import sample_edges, get_logger, edge_probability, extract_terms_from_dataset, get_few_shot_namespace_terms, save_obj, compute_blast_preds, load_obj
 
 
 class GraphTrainer:
@@ -157,3 +158,74 @@ class GraphTrainer:
         save_obj(node_link_auroc, cfg.results_name)
         # save the model
         torch.save(self.model, cfg.save_model_path.format(cfg.method, cfg.pathway_dataset))
+
+    def annotate(self, files, cfg, data_dir, anno_data, task='node_cls'):
+        # data_path = data_dir + anno_file
+        # anno_data = pd.read_pickle(data_path)
+        anno_loader = DataLoader(anno_data, batch_size=cfg.batch_size, shuffle=True)
+        print('Annotate {} with our Model'.format(cfg.pathway_dataset))
+        uniprots, preds = [], []
+        with torch.no_grad():
+            pbar = tqdm(anno_loader, desc='Pathway Node Classification')
+            for batch in pbar:
+                pred_batch = self.model.data_encoder(batch['prot_seq'], batch['prot_description'],
+                                                     batch['prot_network'])
+                uniprots += batch['proteins']
+                preds.append(pred_batch.cpu().numpy())
+
+        data_encodings = np.concatenate(preds, axis=0)
+        pathway_encodings = files.pathway_embeddings.cpu().numpy()
+        go_embeddings = files.text_embeddings.cpu().numpy()
+        nearest_k = 5
+        sims = np.dot(pathway_encodings, np.transpose(go_embeddings))
+        for i in range(np.size(pathway_encodings, 0)):
+            sim_i = sims[i, :]
+            sim_idx = np.argsort(-sim_i)[0: nearest_k]
+            nearest_go_emb = go_embeddings[sim_idx, :]
+            nearest_go_emb = np.vstack((go_embeddings[i, :], nearest_go_emb))
+            emb_i = np.mean(nearest_go_emb, axis=0)
+            pathway_encodings[i, :] = emb_i / np.sqrt(np.sum(np.power(emb_i, 2)))
+
+        # result = collections.OrderedDict()
+        if 'node_cls' in task:
+            logits = np.dot(data_encodings, np.transpose(pathway_encodings))
+            logits = 1 / (1 + np.exp(-logits))
+            # result['node_cls'] = logits
+            return logits
+
+        if 'edge_pred' in task:
+            # edge prediction
+            pred_label = collections.OrderedDict()
+            pathway_dir = cfg.data_repo + cfg.pathway_dataset + '/'
+            if 'pathway_graph.pkl' in os.listdir(pathway_dir):
+                pathway_graph = load_obj(pathway_dir + 'pathway_graph.pkl')
+                uniprot2index = collections.OrderedDict()
+                id = 0
+                for uniprot_id in uniprots:
+                    uniprot2index[uniprot_id] = id
+                    id += 1
+
+                pbar = tqdm(pathway_graph.keys(), desc='Pathway Edge Prediction')
+                for p_id in pbar:
+                    edges_id, edges = [], pathway_graph[p_id]
+                    for e in range(len(edges)):
+                        if edges[e][0] not in uniprot2index.keys() or edges[e][1] not in uniprot2index.keys():
+                            continue
+                        edges_id.append([uniprot2index[edges[e][0]], uniprot2index[edges[e][1]]])
+                    if len(edges_id) == 0:
+                        continue
+                    edges = np.asarray(edges_id)
+                    encodings_i, encodings_j = data_encodings[edges[:, 0], :], data_encodings[edges[:, 1], :]
+                    anno_terms2i, _ = extract_terms_from_dataset(anno_data)
+                    text_encodings_p = pathway_encodings[anno_terms2i[p_id]] / np.sqrt(
+                        np.sum(np.square(pathway_encodings[anno_terms2i[p_id]].squeeze())))
+                    text_encodings_p = text_encodings_p.reshape([1, -1])
+                    score = edge_probability(encodings_i, encodings_j, text_encodings_p)
+                    print(score)
+                    if p_id not in pred_label.keys() or pred_label[p_id] is None:
+                        pred_label[p_id] = []
+                    else:
+                        pred_label[p_id].append(score)
+            return pred_label
+            # result['edge_pred'] = pred_label
+        # return result

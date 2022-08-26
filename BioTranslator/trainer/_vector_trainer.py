@@ -3,7 +3,7 @@ import torch
 import collections
 import numpy as np
 from tqdm import tqdm
-from ..non_text_encoder import VecTranslator
+from ..biotranslator import BioTranslator
 from torch.utils.data import DataLoader
 from ..utils import save_obj, load_obj, get_logger, evaluate_auroc, evaluate_unseen_auroc, evaluate_auprc, evaluate_unseen_auprc
 
@@ -17,7 +17,7 @@ class VecTrainer:
 
     def setup_model(self, files, cfg):
         cfg.expr_dim = files.ngene
-        self.model = VecTranslator(cfg)
+        self.model = BioTranslator(cfg)
 
     def setup_training(self, cfg):
         # train epochs
@@ -120,3 +120,21 @@ class VecTrainer:
 
         # save the results
         save_obj(results_cache, cfg.results_name)
+
+    def annotate(self, files, cfg, data_dir, anno_data, task='cell_type_cls'):
+        annotation = collections.OrderedDict()
+        # data_path = data_dir + anno_file
+        # anno_data = pd.read_pickle(data_path)
+        for unseen_ratio in cfg.unseen_ratio:
+            print('Start Annotation: {}...'.format(cfg.dataset, cfg.eval_dataset))
+            files.generate_data()
+            anno_loader = DataLoader(anno_data, batch_size=cfg.batch_size)
+            print('Annotate Data with Our Model ...')
+            logits = []
+            with torch.no_grad():
+                for batch in anno_loader:
+                    pred_batch = self.model(input_expr=batch['features'], texts=files.test_emb)
+                    logits.append(pred_batch.cpu().numpy())
+            logits = np.concatenate(logits, axis=0)
+            annotation[unseen_ratio] = logits
+        return annotation

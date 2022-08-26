@@ -9,3 +9,5 @@ scikit-learn>=0.21.3
 scanorama>=1.7.1
 pytorch-lightning>=1.4
 torch>=1.8
+networkx
+genism

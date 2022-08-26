@@ -173,11 +173,3 @@ class BioTrainer:
         save_obj(node_link_auroc, cfg.results_name)
         # save the model
         torch.save(self.model, cfg.save_model_path.format(cfg.method, cfg.pathway_dataset))
-
-
-
-
-
-
-
-

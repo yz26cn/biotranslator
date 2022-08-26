@@ -170,10 +170,3 @@ class BioTrainer:
         save_obj(results_list, cfg.results_name)
         if cfg.task == 'few_shot':
             save_obj(with_blast_res_list, cfg.blast_res_name)
-
-
-
-
-
-
-
