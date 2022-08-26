@@ -1,5 +1,5 @@
 """BioTranslator in Python."""
-
+from ._metadata import within_flit
 __version__ = '0.1'
 
 
