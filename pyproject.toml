@@ -53,3 +53,8 @@ Source = "https://github.com/HanwenXuTHU/BioTranslatorProject"
 
 [tool.flit.module]
 name = "biotranslator"
+
+[tool.flit.sdist]
+exclude = [
+    "setup.py",
+]
