@@ -11,6 +11,3 @@ BioTranslator/text_encoder/__pycache__/
 BioTranslator/trainer/__pycache__/
 BioTranslator/utils/__pycache__/
 biotranslator.egg-info/
-build/
-dist/biotranslator-0.1.0-py3-none-any.whl
-dist/biotranslator-0.1.0.tar.gz
