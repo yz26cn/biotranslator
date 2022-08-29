@@ -45,7 +45,7 @@ def train(train_dl, test_dl, model, optimizer, save_path, device):
         attention_mask = data['attention_mask'].view(len(data['attention_mask']) * 2, -1).to(device)
         token_type_ids = data['token_type_ids'].view(len(data['token_type_ids']) * 2, -1).to(device)
         pred = model(input_ids, attention_mask, token_type_ids)
-        loss = compute_loss(pred)
+        loss = compute_loss(pred, device)
         # Backpropagation
         optimizer.zero_grad()
         loss.backward()
@@ -53,6 +53,6 @@ def train(train_dl, test_dl, model, optimizer, save_path, device):
         if batch % 100 == 0:
             loss, current = loss.item(), batch * int(len(input_ids) / 2)
             print(f"Batch: {batch} -> Training loss: {loss:>7f}  [{current:>5d}/{train_size:>5d}]")
-            test(model, test_dl, batch)
+            test(model, test_dl, batch, device)
     torch.save(model.state_dict(), save_path)
     print("Saved PyTorch Model State to {}".format(save_path))

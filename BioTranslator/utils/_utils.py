@@ -366,7 +366,7 @@ def get_BioTranslator_emb(cfg):
 
             pred = model(input_ids, attention_mask, token_type_ids)
             embeddings[classes[i]] = np.asarray(pred.cpu()).reshape([-1, 768])
-        save_obj(embeddings, cfg.emb_path + cfg.emb_name)
+        save_obj(embeddings, cfg.emb_dir + cfg.emb_name)
 
 
 def term2preds_label(preds, label, terms, terms2id):

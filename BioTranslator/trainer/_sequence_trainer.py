@@ -1,12 +1,14 @@
 import os
 import torch
 import collections
+import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from ..metrics import auroc_metrics
-from ..non_text_encoder import SeqTranslator
-from ..utils import term2preds_label, get_logger, get_namespace_terms, get_few_shot_namespace_terms, save_obj, compute_blast_preds, load_obj
+from ..biotranslator import BioTranslator
+from ..utils import term2preds_label, term_training_numbers, get_logger, get_namespace_terms, \
+    get_few_shot_namespace_terms, save_obj, compute_blast_preds, load_obj
 
 
 class SeqTrainer:
@@ -20,7 +22,7 @@ class SeqTrainer:
         cfg.network_dim = files.network_dim
 
     def setup_model(self, cfg):
-        self.model = SeqTranslator(cfg)
+        self.model = BioTranslator(cfg)
 
     def setup_training(self, files, cfg):
         # train epochs
@@ -51,27 +53,34 @@ class SeqTrainer:
         for fold_i in range(cfg.k_fold):
             print('Start Cross-Validation Fold :{} ...'.format(fold_i))
 
+            print(1)
             # setup the model architecture according the methods
             self.setup_model(cfg)
             # setup dataset, the training loss and optimizer
+            print(2)
             self.setup_training(files, cfg)
-
+            print(3)
             train_loader = DataLoader(files.fold_train[fold_i], batch_size=cfg.batch_size, shuffle=True)
+            print(4)
             eval_loader = DataLoader(files.fold_val[fold_i], batch_size=cfg.batch_size, shuffle=True)
-
+            print(5)
             # train the model
             pbar = tqdm(range(self.epoch), desc='Training')
+            print(6)
             for epoch_i in pbar:
+                print(7)
                 train_loss = 0
                 train_count = 0
                 for batch in train_loader:
+                    print(8)
                     train_loss += self.backward_model(batch['prot_seq'], batch['prot_description'],
-                                        batch['prot_network'], files.text_embeddings, batch['label'])
+                                                      batch['prot_network'], files.text_embeddings, batch['label'])
+                    print(9)
                     train_count += len(batch)
+                    print(10)
                     pbar.set_postfix({"Fold": fold_i,
                                       "epoch": epoch_i,
                                       "train loss": train_loss / train_count})
-
             # evaluate the model
             print('Evaluate Our Model ...')
             eval_loss, eval_count = 0, 0
@@ -120,11 +129,9 @@ class SeqTrainer:
                     ont = cfg.ont_term_syn[files.go_data[go_id]['namespace']]
                     for p_i in range(np.size(logits_with_blast, 0)):
                         if go_id not in blast_preds[prots[p_i]].keys():
-                            logits_with_blast[p_i, files.terms2i[go_id]] = (1 - cfg.alphas[ont]) * logits[p_i, files.terms2i[go_id]] \
-                                                                           + cfg.alphas[ont] * 0
+                            logits_with_blast[p_i, files.terms2i[go_id]] = (1 - cfg.alphas[ont]) * logits[p_i, files.terms2i[go_id]] + cfg.alphas[ont] * 0
                         else:
-                            logits_with_blast[p_i, files.terms2i[go_id]] = (1 - cfg.alphas[ont]) * logits[p_i, files.terms2i[go_id]] \
-                                                                           + cfg.alphas[ont] * blast_preds[prots[p_i]][go_id]
+                            logits_with_blast[p_i, files.terms2i[go_id]] = (1 - cfg.alphas[ont]) * logits[p_i, files.terms2i[go_id]] + cfg.alphas[ont] * blast_preds[prots[p_i]][go_id]
 
                 results = collections.OrderedDict()
                 with_blast_res = collections.OrderedDict()
@@ -133,8 +140,7 @@ class SeqTrainer:
                     results[ont] = collections.OrderedDict()
                     with_blast_res[ont] = collections.OrderedDict()
                     for n in range(1, 20):
-                        ont_terms = get_few_shot_namespace_terms\
-                            (files.fold_few_shot_terms_list[fold_i], files.go_data, ont, n)
+                        ont_terms = get_few_shot_namespace_terms(files.fold_few_shot_terms_list[fold_i], files.go_data, ont, n)
                         # evaluate without blast
                         logits_ont, label_ont = term2preds_label(logits, label, ont_terms, files.terms2i)
                         auroc_mean, auroc_pct = auroc_metrics(label_ont, logits_ont)
@@ -152,3 +158,51 @@ class SeqTrainer:
         save_obj(results_list, cfg.results_name)
         if cfg.task == 'few_shot':
             save_obj(with_blast_res_list, cfg.blast_res_name)
+
+    def annotate(self, files, cfg, data_dir, anno_data, task='prot_func_pred'):
+        def zero_shot_terms():
+            zero_shot_term_path = data_dir + 'zero_shot_terms.pkl'
+            zero_shot_terms = load_obj(zero_shot_term_path)
+            return zero_shot_terms
+
+        def term2preds_label(preds, terms, terms2id):
+            new_preds = []
+            for t_id in terms:
+                new_preds.append(preds[:, terms2id[t_id]].reshape((-1, 1)))
+            new_preds = np.concatenate(new_preds, axis=1)
+            return new_preds
+
+        def zero_shot_data(zero_shot_terms_list, train):
+            drop_index = []
+            for j in train.index:
+                annts = train.loc[j]['annotations']
+                insct = list(set(annts).intersection(zero_shot_terms_list))
+                if len(insct) > 0:
+                    drop_index.append(j)
+            train = train.drop(index=drop_index)
+            return train
+
+        # data_path = data_dir + anno_file
+        # print('Annotate {} dataset in zero shot with our model'.format(data_path))
+        # anno_data = pd.read_pickle(data_path)
+        anno_loader = DataLoader(anno_data, batch_size=cfg.batch_size, shuffle=True)
+
+        print('Annotate Data with Our Model ...')
+        logits, prots = [], []
+        with torch.no_grad():
+            for batch in anno_loader:
+                pred_batch = self.model(batch['prot_seq'], batch['prot_description'],
+                                        batch['prot_network'], files.text_embeddings)
+                prots += batch['proteins']
+                logits.append(pred_batch.cpu().numpy())
+        logits = np.concatenate(logits, axis=0)
+
+        # if cfg.task == 'zero_shot':
+        zero_shot_terms = zero_shot_terms()
+        zero_shot_data(zero_shot_terms, files.raw_train)
+        logits_ont = collections.OrderedDict()
+        for ont in ['bp', 'mf', 'cc']:
+            # extract the predictions and labels of zero shot terms
+            ont_terms = get_namespace_terms(list(files.zero_shot_terms.keys()), files.go_data, ont)
+            logits_ont[ont] = term2preds_label(logits, ont_terms, files.terms2i)
+        return logits_ont

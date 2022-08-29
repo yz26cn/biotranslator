@@ -82,7 +82,7 @@ python Protein/main.py --method ProTranslator --dataset GOA_Human --data_repo /d
 python Protein/main.py --method TFIDF --dataset GOA_Human --data_repo /data/ProteinDataset --task zero_shot --encoder_path model/text_encoder.pth --emb_path /embeddings
 python Protein/main.py --method clusDCA --dataset GOA_Human --data_repo /data/ProteinDataset --task zero_shot --encoder_path model/text_encoder.pth --emb_path /embeddings
 python Protein/main.py --method Word2Vec --dataset GOA_Human --data_repo /data/ProteinDataset --task zero_shot --encoder_path model/text_encoder.pth --emb_path /embeddings
-python Protein/main.py --method Doc2Vec --dataset GOA_Human --data_repo /data/ProteinDataset --task zero_shot --encoder_path model/text_encoder.pth --emb_path /embeddings
+python Protein/main.py --method Doc2Vec --dataset GOA_Hpuman --data_repo /data/ProteinDataset --task zero_shot --encoder_path model/text_encoder.pth --emb_path /embeddings
 ```
 Run the codes to perform the few shot prediction task. 
 ```cmd

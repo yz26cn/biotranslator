@@ -29,19 +29,19 @@ class BioConfig:
         # load the settings in args
         # Note: eval_dataset, task, ontology_repo, max_length, excludes
         self.dataset = args['dataset'].strip()
-        self.eval_dataset = args['eval_dataset'].strip() if args['eval_dataset'] else ""
-        self.excludes = args['graph_excludes']
-        self.method = args['method'].strip()
+        self.eval_dataset = args['eval_dataset'].strip() if 'eval_dataset' in args else ""
+        self.excludes = args['graph_excludes'] if 'graph_excludes' in args else ""
+        self.method = 'BioTranslator'
         self.data_repo = args['data_repo'].strip()
-        self.ontology_repo = args['vec_ontology_repo'].strip() if args['vec_ontology_repo'] else ""
         self.encoder_path = args['encoder_path'].strip()
-        self.emb_path = args['emb_path'].strip()
-        self.task = args['task'].strip() if args['task'] else ""
-        self.working_space = args['working_space'].strip()
-        self.save_path = args['save_path'].strip()
-        self.max_length = args['max_length']
+        self.ontology_repo = args['vec_ontology_repo'].strip() if 'vec_ontology_repo' in args else ""
+        self.emb_dir = args['emb_dir'].strip()
+        self.task = args['task'].strip() if 'task' in args else ""
+        self.ws_dir = args['ws_dir'].strip()
+        self.rst_dir = args['rst_dir'].strip()
+        self.max_length = args['max_length'] if 'max_length' in args else -1
         self.hidden_dim = args['hidden_dim']
-        self.features = args['features'].split(', ')
+        self.features = args['features'].split(', ') if 'features' in args else ""
         self.lr = args['lr']
         self.epoch = args['epoch']
         self.batch_size = args['batch_size']
@@ -69,25 +69,26 @@ class BioConfig:
         # the dimension of term text/graph embeddings
         self.term_enc_dim = 768
         # where you store the deep learning model
-        self.save_model_path = self.working_space + f'{self.task}/' + 'model/{}_{}_{}_{}.pth'
+        self.save_model_path = self.ws_dir + f'{self.task}/' + 'model/{}_{}_{}_{}.pth'
         # the name of logger file, that contains the information of training process
-        self.logger_name = self.working_space + f'{self.task}/log/{self.method}_{self.dataset}.log'
+        self.logger_name = self.ws_dir + f'{self.task}/log/{self.method}_{self.dataset}.log'
         # where you save the results of BioTranslator
-        self.results_name = self.working_space + f'{self.task}/results/{self.method}_{self.dataset}.pkl'
+        self.results_name = self.ws_dir + f'{self.task}/results/{self.method}_{self.dataset}.pkl'
         if self.tp in ['seq', 'graph']:
             if self.tp == 'seq':
                 self.k_fold = 3
-            elif self.tp == 'graph':
-                # select the nearest k GO term embeddings when annotate the pathway
-                self.nearest_k = 5
                 # load the Diamond score related results
                 if self.task == 'few_shot':
                     self.diamond_score_path = self.data_repo + self.dataset + '/validation_data_fold_{}.res'
                     self.blast_preds_path = self.data_repo + self.dataset + '/blast_preds_fold_{}.pkl'
                     # the alhpa paramter we used in DeepGOPlus
-                    self.ont_term_syn = {'biological_process': 'bp', 'molecular_function': 'mf', 'cellular_component': 'cc'}
+                    self.ont_term_syn = {'biological_process': 'bp', 'molecular_function': 'mf',
+                                         'cellular_component': 'cc'}
                     self.alphas = {"mf": 0.68, "bp": 0.63, "cc": 0.46}
-                    self.blast_res_name = self.working_space + f'{self.task}/results/{self.method}_{self.dataset}_blast.pkl'
+                    self.blast_res_name = self.ws_dir + f'{self.task}/results/{self.method}_{self.dataset}_blast.pkl'
+            elif self.tp == 'graph':
+                # select the nearest k GO term embeddings when annotate the pathway
+                self.nearest_k = 5
                 # get the path of pathway textual description embeddings
                 self.pathway_emb_file = self.data_repo + self.eval_dataset + '/pathway_embeddings.pkl'
             # get the name of train data textual description embeddings
@@ -104,14 +105,14 @@ class BioConfig:
             # set the memory saving mode to True
             self.memory_saving_mode = True
             # where you store the backup files
-            self.backup_file = self.working_space + f'{self.task}/cache/sparse_backup_raw.h5ad'
+            self.backup_file = self.ws_dir + f'{self.task}/cache/sparse_backup_raw.h5ad'
             # get the name of textual description embeddings
             self.emb_name = f'{self.method}_co_embeddings.pkl'
             # when the task is cross_dataset
             if self.task == 'cross_dataset':
                 self.n_iter = 1
                 self.unseen_ratio = ['cross_dataset']
-                self.save_model_path = self.working_space + f'{self.task}/' + 'model/{}_{}_{}.pth'
-                self.logger_name = self.working_space + f'{self.task}/log/{self.method}_{self.dataset}_{self.eval_dataset}.log'
-                self.eval_backup_file = self.working_space + f'{self.task}/cache/sparse_backup_eval.h5ad'
-                self.results_name = self.working_space + f'{self.task}/results/{self.method}_{self.dataset}_{self.eval_dataset}.pkl'
+                self.save_model_path = self.ws_dir + f'{self.task}/' + 'model/{}_{}_{}.pth'
+                self.logger_name = self.ws_dir + f'{self.task}/log/{self.method}_{self.dataset}_{self.eval_dataset}.log'
+                self.eval_backup_file = self.ws_dir + f'{self.task}/cache/sparse_backup_eval.h5ad'
+                self.results_name = self.ws_dir + f'{self.task}/results/{self.method}_{self.dataset}_{self.eval_dataset}.pkl'

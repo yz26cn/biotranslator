@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*-
+import itertools
+import numpy as np
+from torch import nn
+from torch.nn import init
+from transformers import AutoTokenizer, AutoModel
+import torch
+import collections
+from ..utils import init_weights
+
+
 class BioDataEncoder(nn.Module):
     def __init__(self,
                  feature=None,
@@ -21,7 +32,9 @@ class BioDataEncoder(nn.Module):
             kernels = range(8, seq_max_kernels, 8)
             self.kernel_num = len(kernels)
             for i in range(len(kernels)):
-                exec("self.conv1d_{} = nn.Conv1d(in_channels=seq_input_nc, out_channels=seq_in_nc, kernel_size=kernels[i], padding=0, stride=1)".format(i))
+                exec(
+                    "self.conv1d_{} = nn.Conv1d(in_channels=seq_input_nc, out_channels=seq_in_nc, kernel_size=kernels[i], padding=0, stride=1)".format(
+                        i))
                 exec("self.pool1d_{} = nn.MaxPool1d(kernel_size=seq_length - kernels[i] + 1, stride=1)".format(i))
             self.fc_seq = [nn.Linear(len(kernels) * seq_in_nc, hidden_dim), nn.LeakyReLU(inplace=True)]
             self.fc_seq = nn.Sequential(*self.fc_seq)
@@ -62,43 +75,52 @@ class BioDataEncoder(nn.Module):
 
 class BioTranslator(nn.Module):
     def __init__(self, cfg):
-        super(BioDataTranslator, self).__init__()
+        super(BioTranslator, self).__init__()
         self.loss_func = torch.nn.BCELoss()
-        self.data_encoder = BioDataEncoder(feature=cfg.features,
-                                        hidden_dim=cfg.hidden_dim,
-                                        seq_input_nc=cfg.seq_input_nc,
-                                        seq_in_nc=cfg.seq_in_nc,
-                                        seq_max_kernels=cfg.seq_max_kernels,
-                                        network_dim=cfg.network_dim,
-                                        seq_length=cfg.max_length,
-                                        expression_dim=cfg.expr_dim,
-                                        drop_out=cfg.drop_out,
-                                        text_dim=cfg.term_enc_dim)
-        if cfg.data_type == "seq" or cfg.data_type == "seq":
+        if cfg.tp in ['seq', 'graph']:
+            kwargs = dict(feature=cfg.features,
+                          hidden_dim=cfg.hidden_dim,
+                          seq_input_nc=cfg.seq_input_nc,
+                          seq_in_nc=cfg.seq_in_nc,
+                          seq_max_kernels=cfg.seq_max_kernels,
+                          network_dim=cfg.network_dim,
+                          seq_length=cfg.max_length,
+                          text_dim=cfg.term_enc_dim)
+        elif cfg.tp == 'vec':
+            kwargs = dict(feature=cfg.features,
+                           hidden_dim=cfg.hidden_dim,
+                           expression_dim=cfg.expr_dim,
+                           drop_out=cfg.drop_out,
+                           text_dim=cfg.term_enc_dim)
+        else:
+            raise NotImplementedError
+        self.data_encoder = BioDataEncoder(**kwargs)
+
+        if cfg.tp == "seq" or cfg.tp == "seq":
             self.activation = torch.nn.Sigmoid()
             # self.text_encoder = torch.load(model_config.text_encoder)
             self.temperature = torch.tensor(0.07, requires_grad=True)
-        elif cfg.data_type == "vec":
+        elif cfg.tp == "vec":
             self.activation = torch.nn.Softmax(dim=1)
         else:
             raise NotImplementedError
 
         self.text_dim = cfg.term_enc_dim
-        self.init_weights(self.data_encoder, init_type='xavier')
+        init_weights(self.data_encoder, init_type='xavier')
         if len(cfg.gpu_ids) > 0:
             self.data_encoder = self.data_encoder.to('cuda')
             self.temperature = self.temperature.to('cuda')
             self.activation = self.activation.to('cuda')
 
-    def forward(self, input_seq, input_description, input_vector, input_expr, texts):
+    def forward(self, data_type, input_seq, input_description, input_vector, input_expr, texts):
         # get textual description encodings
         text_encodings = texts.permute(1, 0)
         # get biology instance encodings
-        if secfg.data_type == "seq" or cfg.data_type == "graph":
+        if data_type == "seq" or data_type == "graph":
             data_encodings = self.data_encoder(x=input_seq,
                                                input_description=input_description,
                                                input_vector=input_vector)
-        elif cfg.data_type == "vec":
+        elif data_type == "vec":
             data_encodings = self.data_encoder(x_expr=input_expr)
         else:
             raise NotImplementedError
