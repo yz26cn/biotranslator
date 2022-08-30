@@ -1,4 +1,4 @@
-# BioTranslator
+# BioTranslator API
 
 ## Section 1: Introduction
 BioTranslator is a cross-modal translator which can annotate biology instances only using user-written texts.
@@ -7,9 +7,12 @@ BioTranslator takes a user-written textual description of the new discovery and 
 
 
 ## Section 2: Installation Tutorial
-### Section 2.1: System Requirement
-BioTranslator is implemented using Python 3.7 in LINUX. BioTranslator requires torch==1.7.1+cu110, torchvision==0.8.2+cu110, numpy, pandas, sklearn, transformers, networkx, seaborn, tokenizers and so on.
-BioTranslator requires you have one GPU device to run the codes.
+### Section 2.1: System Setup
+```
+conda install pytorch==1.7.1 torchvision==0.8.2 torchaudio==0.7.2 cudatoolkit=11.0 -c pytorch
+```
+For more information, check the requirements.txt file.
+
 ### Section 2.2: How to use our codes
 The function annotation, cell type discovery and pathway analysis task in our paper are put in Protein, SingleCell and Pathway respectively.
 The main codes are in the BioTranslator folder and the struture of the project is
@@ -18,12 +21,13 @@ The main codes are in the BioTranslator folder and the struture of the project i
 ``` 
 BioTranslator/  
 ├── __init__.py/
-├── BioConfig.py/ 
-├── BioLoader.py/ 
-├── BioMetrics.py/ 
-├── BioModel.py/ 
-├── BioTrain.py/   
-├── BioUtils.py/  
+├── biotranslator/
+├── config/
+├── loader/
+├── metrics/
+├── text_encoder/
+├── trainer/
+├── utils 
 ```
 The first step of BioTranslator is to train a text encoder with contrastive learning on 225 ontologies data.
 
@@ -78,11 +82,6 @@ python Protein/main.py --method BioTranslator --dataset CAFA3 --data_repo /data/
 Run the codes using different baselines/
 ```cmd
 python Protein/main.py --method BioTranslator --dataset GOA_Human --data_repo /data/ProteinDataset --task zero_shot --encoder_path model/text_encoder.pth --emb_path /embeddings
-python Protein/main.py --method ProTranslator --dataset GOA_Human --data_repo /data/ProteinDataset --task zero_shot --encoder_path model/text_encoder.pth --emb_path /embeddings
-python Protein/main.py --method TFIDF --dataset GOA_Human --data_repo /data/ProteinDataset --task zero_shot --encoder_path model/text_encoder.pth --emb_path /embeddings
-python Protein/main.py --method clusDCA --dataset GOA_Human --data_repo /data/ProteinDataset --task zero_shot --encoder_path model/text_encoder.pth --emb_path /embeddings
-python Protein/main.py --method Word2Vec --dataset GOA_Human --data_repo /data/ProteinDataset --task zero_shot --encoder_path model/text_encoder.pth --emb_path /embeddings
-python Protein/main.py --method Doc2Vec --dataset GOA_Hpuman --data_repo /data/ProteinDataset --task zero_shot --encoder_path model/text_encoder.pth --emb_path /embeddings
 ```
 Run the codes to perform the few shot prediction task. 
 ```cmd
