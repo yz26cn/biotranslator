@@ -33,7 +33,7 @@ setup(
         "pandas",
         "tqdm",
         "networkx",
-        "genism",
+        "gensim",
         "nltk",
         "torchvision==0.8.2",
     ]
