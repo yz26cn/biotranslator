@@ -3,7 +3,7 @@
 ```
 
 * Get started by browsing {doc}`Tutorial <tutorial>` or the main {doc}`API <api>`.
-* Follow updates in the {ref}`release notes <release-notes>`.
+* Follow updates in the {ref}`release notes <changes>`.
 
 ## News
 
@@ -16,7 +16,7 @@
 
 ## Latest additions
 
-```{include} release_notes/release_latest.md
+```{include} changes.md
 ```
 
 ```{toctree}
@@ -28,7 +28,7 @@ news
 tutorial
 installation
 setup_datasets
-release_notes/index
+changes
 ```
 
 [github]: https://github.com/ywzhao2002/biotranslator
