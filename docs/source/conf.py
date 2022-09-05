@@ -5,9 +5,11 @@ copyright = f'{datetime.now():%Y}, BioTranslator team.'
 author = 'BioTranslator team'
 
 # -- General configuration ---------------------------------------------------
-extensions = ['myst_parser']
+extensions = ['myst-parser']
 
 templates_path = ['_templates']
+master_doc = 'index'
+pygments_style = 'sphinx'
 exclude_patterns = []
 
 html_theme = 'alabaster'
