@@ -2,15 +2,7 @@
 :end-line: 8
 ```
 
-```{eval-rst}
-.. role:: small
-```
-
-```{eval-rst}
-.. role:: smaller
-```
-
-* Get started by browsing {doc}`tutorials <tutorials>`, {doc}`usage principles <usage-principles>`, or the main {doc}`API <api>`.
+* Get started by browsing {doc}`Tutorial <tutorial>` or the main {doc}`API <api>`.
 * Follow updates in the {ref}`release notes <release-notes>`.
 
 # News
@@ -33,6 +25,7 @@
 
 tutorial
 installation
+setup_datasets
 api
 release-notes/index
 news

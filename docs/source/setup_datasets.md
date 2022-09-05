@@ -1,4 +1,4 @@
-## Download datasets
+# Download datasets
 
 The datasets used for protein function prediction and pathway analysis are available at:
 https://figshare.com/articles/dataset/Protein_Pathway_data_tar/20120447
@@ -11,7 +11,7 @@ https://figshare.com/ndownloader/files/31777475. Other datasets used for single 
 are obtained from OnClass.
 
 
-### Example dataset structure for protein sequence prediction and pathway analysis:
+## Example dataset structure for protein sequence prediction and pathway analysis:
 
 ```
 ├── data
@@ -171,7 +171,7 @@ are obtained from OnClass.
 │       └── zero_shot_terms_fold_2.pkl
 ```
 
-### Example dataset structure for single cell classification task:
+## Example dataset structure for single cell classification task:
 ```
 ├── data
 │   ├── ont_data

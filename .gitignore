@@ -11,3 +11,4 @@ biotranslator/text_encoder/__pycache__/
 biotranslator/trainer/__pycache__/
 biotranslator/utils/__pycache__/
 biotranslator.egg-info/
+biotranslator/BioTranslator/biotranslator/__pycache__/
