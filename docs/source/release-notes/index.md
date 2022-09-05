@@ -1,6 +1,6 @@
 (release-notes)=
 
-# Release notes
+# Release Notes
 
 ```{include} release-latest.md
 ```
