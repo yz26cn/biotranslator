@@ -5,7 +5,7 @@
 * Get started by browsing {doc}`Tutorial <tutorial>` or the main {doc}`API <api>`.
 * Follow updates in the {ref}`release notes <release-notes>`.
 
-# News
+## News
 
 ```{include} news.md
 :start-line: 9
@@ -14,7 +14,7 @@
 
 {ref}`(past news) <News>`
 
-# Latest additions
+## Latest additions
 
 ```{include} release_notes/release_latest.md
 ```
