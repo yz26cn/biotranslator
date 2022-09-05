@@ -45,6 +45,10 @@ dependencies = [
     "nltk",
     "torchvision==0.8.2",
 ]
+[project.optional-dependencies]
+doc = [
+    "myst-parser",
+]
 [project.urls]
 Documentation = "https://biotranslator.readthedocs.io/en/latest/"
 Source = "https://github.com/HanwenXuTHU/BioTranslatorProject"

@@ -16,7 +16,7 @@
 
 # Latest additions
 
-```{include} release-notes/release-latest.md
+```{include} release_notes/release_latest.md
 ```
 
 ```{toctree}
@@ -27,7 +27,7 @@ tutorial
 installation
 setup_datasets
 api
-release-notes/index
+release_notes/index
 news
 ```
 
