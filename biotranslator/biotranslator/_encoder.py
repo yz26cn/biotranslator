@@ -96,7 +96,7 @@ class BioTranslator(nn.Module):
             raise NotImplementedError
         self.data_encoder = BioDataEncoder(**kwargs)
 
-        if cfg.tp == "seq" or cfg.tp == "seq":
+        if cfg.tp == "seq" or cfg.tp == "graph":
             self.activation = torch.nn.Sigmoid()
             # self.text_encoder = torch.load(model_config.text_encoder)
             self.temperature = torch.tensor(0.07, requires_grad=True)
@@ -112,14 +112,14 @@ class BioTranslator(nn.Module):
             self.temperature = self.temperature.to('cuda')
             self.activation = self.activation.to('cuda')
 
-    def forward(self, data_type, input_seq, input_description, input_vector, input_expr, texts):
+    def forward(self, data_type=None, input_seq=None, input_description=None, input_vector=None, input_expr=None, texts=None):
         # get textual description encodings
         text_encodings = texts.permute(1, 0)
         # get biology instance encodings
         if data_type == "seq" or data_type == "graph":
             data_encodings = self.data_encoder(x=input_seq,
-                                               input_description=input_description,
-                                               input_vector=input_vector)
+                                               x_description=input_description,
+                                               x_vector=input_vector)
         elif data_type == "vec":
             data_encodings = self.data_encoder(x_expr=input_expr)
         else:

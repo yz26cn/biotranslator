@@ -113,6 +113,79 @@ def load(filename, with_rels=True):
     return ont
 
 
+def get_ontology_embeddings(cfg):
+    """Get the textual description embeddings of Gene Ontology (GO) or Cell Ontology (CO) terms
+
+    Parameters
+    ----------
+    cfg:
+        config
+
+    Returns
+    -------
+    ont_embeddings:
+        the ontology embeddings
+    """
+
+    """This function uses the BioTranslator Text Encoder to embed the Gene Ontology terms
+    :param cfg:
+    :return:
+    """
+    embeddings = collections.OrderedDict()
+    bert_name = 'microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext'
+    tokenizer = AutoTokenizer.from_pretrained('microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext')
+    model = NeuralNetwork('None', 'cls', bert_name)
+    model.load_state_dict(torch.load(cfg.encoder_path))
+    model = model.to('cuda')
+    model.eval()
+
+    if cfg.tp in ['seq', 'graph']:
+        if cfg.task not in ["single-dataset", "cross-dataset"]:
+            # go embedding
+            data = load(cfg.go_file)
+            classes = list(data.keys())
+            texts = []
+            for i in tqdm(range(len(classes))):
+                with torch.no_grad():
+                    texts.append(data[classes[i]]['name'] + '. ' + data[classes[i]]['def'][0])
+        else:
+            # co embedding
+            text = load_co_text(cfg.ontology_repo + 'cl.obo')
+            classes = list(text.keys())
+            texts = []
+            for i in tqdm(range(len(classes))):
+                with torch.no_grad():
+                    texts.append(text[classes[i]]['text'])
+    elif cfg.tp == 'cell':
+        # co embedding
+        text = load_co_text(cfg.ontology_repo + 'cl.obo')
+        classes = list(text.keys())
+        texts = []
+        for i in tqdm(range(len(classes))):
+            with torch.no_grad():
+                texts.append(text[classes[i]]['text'])
+
+    with torch.no_grad():
+        for i in tqdm(range(len(classes))):
+            text = texts[i]
+            inputs = tokenizer(text, return_tensors='pt').to('cuda')
+            if len(cfg.gpu_ids) > 0:
+                inputs = inputs.to('cuda')
+            sents_len = min(inputs['input_ids'].size(1), 512)
+            input_ids = inputs['input_ids'][0, 0: sents_len].view(len(inputs['input_ids']), -1).to('cuda')
+            attention_mask = inputs['attention_mask'][0, 0: sents_len].view(len(inputs['attention_mask']),
+                                                                            -1).to(
+                'cuda')
+            token_type_ids = inputs['token_type_ids'][0, 0: sents_len].view(len(inputs['token_type_ids']),
+                                                                            -1).to(
+                'cuda')
+
+            pred = model(input_ids, attention_mask, token_type_ids)
+            embeddings[classes[i]] = np.asarray(pred.cpu()).reshape([-1, 768])
+        save_obj(embeddings, cfg.emb_path + cfg.emb_name)
+    return embeddings
+
+
 def get_anchestors(go, term_id):
     if term_id not in go:
         return []
@@ -314,59 +387,6 @@ class NeuralNetwork(nn.Module):
         elif self.output_way == 'pooler':
             output = x1.pooler_output
         return output
-
-
-def gen_go_emb(cfg):
-    if cfg.method == 'BioTranslator':
-        get_BioTranslator_emb(cfg)
-    else:
-        print('Warnings: No such method to embed terms!')
-
-
-def get_BioTranslator_emb(cfg):
-    """This function uses the BioTranslator Text Encoder to embed the Gene Ontology terms
-    :param cfg:
-    :return:
-    """
-    if cfg.task not in ["single-dataset", "cross-dataset"]:
-        data = load(cfg.go_file)
-        classes = list(data.keys())
-        texts = []
-        for i in tqdm(range(len(classes))):
-            with torch.no_grad():
-                texts.append(data[classes[i]]['name'] + '. ' + data[classes[i]]['def'][0])
-    else:
-        text = load_co_text(cfg.ontology_repo + 'cl.obo')
-        classes = list(text.keys())
-        texts = []
-        for i in tqdm(range(len(classes))):
-            with torch.no_grad():
-                texts.append(text[classes[i]]['text'])
-
-    embeddings = collections.OrderedDict()
-    bert_name = 'microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext'
-    tokenizer = AutoTokenizer.from_pretrained('microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext')
-    model = NeuralNetwork('None', 'cls', bert_name)
-    model.load_state_dict(torch.load(cfg.encoder_path))
-    model = model.to('cuda')
-    model.eval()
-
-    with torch.no_grad():
-        for i in tqdm(range(len(classes))):
-            text = texts[i]
-            inputs = tokenizer(text, return_tensors='pt').to('cuda')
-            if len(cfg.gpu_ids) > 0:
-                inputs = inputs.to('cuda')
-            sents_len = min(inputs['input_ids'].size(1), 512)
-            input_ids = inputs['input_ids'][0, 0: sents_len].view(len(inputs['input_ids']), -1).to('cuda')
-            attention_mask = inputs['attention_mask'][0, 0: sents_len].view(len(inputs['attention_mask']), -1).to(
-                'cuda')
-            token_type_ids = inputs['token_type_ids'][0, 0: sents_len].view(len(inputs['token_type_ids']), -1).to(
-                'cuda')
-
-            pred = model(input_ids, attention_mask, token_type_ids)
-            embeddings[classes[i]] = np.asarray(pred.cpu()).reshape([-1, 768])
-        save_obj(embeddings, cfg.emb_dir + cfg.emb_name)
 
 
 def term2preds_label(preds, label, terms, terms2id):
@@ -1403,17 +1423,6 @@ def load_co_text(co_data_path):
         if obj is not None and len(obj['text']) > 0:
             ont[obj['id']] = obj
     return ont
-
-
-def gen_co_emb(cfg):
-    if cfg.method == 'BioTranslator':
-        get_BioTranslator_emb(cfg)
-    else:
-        print('Warnings: No such method to embed terms!')
-
-
-
-
 
 def extract_data_based_on_class(feats, labels, sel_labels):
     ind = []

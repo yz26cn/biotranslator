@@ -5,7 +5,9 @@ import numpy as np
 from tqdm import tqdm
 from ..biotranslator import BioTranslator
 from torch.utils.data import DataLoader
-from ..utils import save_obj, load_obj, get_logger, evaluate_auroc, evaluate_unseen_auroc, evaluate_auprc, evaluate_unseen_auprc
+from ..utils import save_obj, load_obj, get_logger, evaluate_auroc, evaluate_unseen_auroc, evaluate_auprc, \
+    evaluate_unseen_auprc
+
 
 class VecTrainer:
 
@@ -28,7 +30,9 @@ class VecTrainer:
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=cfg.lr)
 
     def backward_model(self, input_expr, emb_tensor, label):
-        logits = self.model(input_expr=input_expr, texts=emb_tensor)
+        logits = self.model(data_type='vec',
+                            input_expr=input_expr,
+                            texts=emb_tensor)
         self.loss = self.loss_func(logits, label)
         self.optimizer.zero_grad()
         self.loss.backward()
@@ -95,9 +99,10 @@ class VecTrainer:
                     auroc = evaluate_auroc(logits, label)
                     unseen_auprc = evaluate_unseen_auprc(logits, label, files.unseen2i)
                     auprc = evaluate_auprc(logits, label)
-                    self.logger.info('Test all AUROCs :{} unseen AUROCs:{} AUPRCs :{} unseen AUPRCs:{}'.format(auroc, unseen_auroc,
-                                                                                                    auprc,
-                                                                                                    unseen_auprc))
+                    self.logger.info(
+                        'Test all AUROCs :{} unseen AUROCs:{} AUPRCs :{} unseen AUPRCs:{}'.format(auroc, unseen_auroc,
+                                                                                                  auprc,
+                                                                                                  unseen_auprc))
                     results_cache['auroc'][unseen_ratio].append(auroc)
                     results_cache['unseen_auroc'][unseen_ratio].append(unseen_auroc)
                     results_cache['auprc'][unseen_ratio].append(auprc)
@@ -109,9 +114,10 @@ class VecTrainer:
                     auroc = evaluate_auroc(logits, label)
                     unseen_auprc = evaluate_unseen_auprc(logits, label, files.unseen2i)
                     auprc = evaluate_auprc(logits, label)
-                    self.logger.info('Test all AUROCs :{} unseen AUROCs:{} AUPRCs :{} unseen AUPRCs:{}'.format(auroc, unseen_auroc,
-                                                                                                    auprc,
-                                                                                                    unseen_auprc))
+                    self.logger.info(
+                        'Test all AUROCs :{} unseen AUROCs:{} AUPRCs :{} unseen AUPRCs:{}'.format(auroc, unseen_auroc,
+                                                                                                  auprc,
+                                                                                                  unseen_auprc))
                     results_cache['auroc'] = auroc
                     results_cache['unseen_auroc'] = unseen_auroc
                     results_cache['auprc'] = auprc

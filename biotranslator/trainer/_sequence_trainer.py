@@ -36,7 +36,11 @@ class SeqTrainer:
         self.val_dataset = files.fold_val
 
     def backward_model(self, input_seq, input_description, input_vector, emb_tensor, label):
-        logits = self.model(input_seq, input_description, input_vector, emb_tensor)
+        logits = self.model(data_type='seq',
+                            input_seq=input_seq,
+                            input_description=input_description,
+                            input_vector=input_vector,
+                            texts=emb_tensor)
         self.loss = self.loss_func(logits, label)
         self.optimizer.zero_grad()
         self.loss.backward()
@@ -53,31 +57,21 @@ class SeqTrainer:
         for fold_i in range(cfg.k_fold):
             print('Start Cross-Validation Fold :{} ...'.format(fold_i))
 
-            print(1)
             # setup the model architecture according the methods
             self.setup_model(cfg)
             # setup dataset, the training loss and optimizer
-            print(2)
             self.setup_training(files, cfg)
-            print(3)
             train_loader = DataLoader(files.fold_train[fold_i], batch_size=cfg.batch_size, shuffle=True)
-            print(4)
             eval_loader = DataLoader(files.fold_val[fold_i], batch_size=cfg.batch_size, shuffle=True)
-            print(5)
             # train the model
             pbar = tqdm(range(self.epoch), desc='Training')
-            print(6)
             for epoch_i in pbar:
-                print(7)
                 train_loss = 0
                 train_count = 0
                 for batch in train_loader:
-                    print(8)
                     train_loss += self.backward_model(batch['prot_seq'], batch['prot_description'],
                                                       batch['prot_network'], files.text_embeddings, batch['label'])
-                    print(9)
                     train_count += len(batch)
-                    print(10)
                     pbar.set_postfix({"Fold": fold_i,
                                       "epoch": epoch_i,
                                       "train loss": train_loss / train_count})

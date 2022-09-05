@@ -5,6 +5,7 @@ class BioConfig:
         self.load_args(args)
         # load dir of the dataaset
         data_dir = self.data_repo + self.dataset + '/'
+        print("data_dir: ", data_dir)
         # load dataset file
         if self.tp == "graph":
             self.go_file, self.train_file, _, _, \

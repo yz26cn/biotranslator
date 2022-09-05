@@ -35,7 +35,11 @@ class GraphTrainer:
         self.val_dataset = files.eval_data
 
     def backward_model(self, input_seq, input_description, input_vector, emb_tensor, label):
-        logits = self.model(input_seq, input_description, input_vector, emb_tensor)
+        logits = self.model(data_type='graph',
+                            input_seq=input_seq,
+                            input_description=input_description,
+                            input_vector=input_vector,
+                            texts=emb_tensor)
         self.loss = self.loss_func(logits, label)
         self.optimizer.zero_grad()
         self.loss.backward()
@@ -64,8 +68,11 @@ class GraphTrainer:
             train_loss = 0
             train_count = 0
             for batch in train_loader:
-                train_loss += self.backward_model(batch['prot_seq'], batch['prot_description'],
-                                    batch['prot_network'], files.text_embeddings, batch['label'])
+                train_loss += self.backward_model(batch['prot_seq'],
+                                                  batch['prot_description'],
+                                                  batch['prot_network'],
+                                                  files.text_embeddings,
+                                                  batch['label'])
                 train_count += len(batch)
                 pbar.set_postfix({"epoch": epoch_i,
                                   "train loss": train_loss / train_count})

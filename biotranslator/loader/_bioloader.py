@@ -7,9 +7,9 @@ import numpy as np
 import pandas as pd
 import collections
 from tqdm import tqdm
-from ..utils import load, load_obj, proteinData, emb2tensor, gen_go_emb, organize_workingspace, \
-    term_training_numbers, extract_terms_from_dataset, gen_co_emb, cellData, SplitTrainTest, find_gene_ind, \
-    DataProcessing, read_data, read_data_file, read_ontology_file
+from ..utils import load, load_obj, proteinData, emb2tensor, organize_workingspace, \
+    term_training_numbers, extract_terms_from_dataset, cellData, SplitTrainTest, find_gene_ind, \
+    DataProcessing, read_data, read_data_file, read_ontology_file, get_ontology_embeddings
 
 
 class BioLoader:
@@ -35,7 +35,7 @@ class BioLoader:
                 self.register_task(cfg)
             # generate proteinData, which is defined in BioUtils
             self.gen_protein_data(cfg)
-        # load textual description embeddings of go terms
+        # load textual description embeddings of go or co terms
         self.load_text_emb(cfg)
         if cfg.tp == 'vec':
             # load files
@@ -142,14 +142,16 @@ class BioLoader:
             self.eval_data = proteinData(self.eval_data, self.eval_terms2i, self.eval_prot_network,
                                          self.eval_prot_description, gpu_ids=cfg.gpu_ids)
         elif cfg.tp == 'seq':
+            # generate protein data which can be loaded by torch
+            # the raw train and test data is for blast preds function in BioTrainer
             self.raw_train, self.raw_val = [], []
             for fold_i in range(cfg.k_fold):
                 self.raw_train.append(self.fold_train[fold_i].copy(deep=True))
-            self.raw_val.append(self.fold_val[fold_i].copy(deep=True))
-            self.fold_train[fold_i] = proteinData(self.fold_train[fold_i], self.terms2i, self.prot_network,
-                                        self.prot_description, gpu_ids = cfg.gpu_ids)
-            self.fold_val[fold_i] = proteinData(self.fold_val[fold_i], self.terms2i, self.prot_network,
-                                      self.prot_description, gpu_ids = cfg.gpu_ids)
+                self.raw_val.append(self.fold_val[fold_i].copy(deep=True))
+                self.fold_train[fold_i] = proteinData(self.fold_train[fold_i], self.terms2i, self.prot_network,
+                                            self.prot_description, gpu_ids = cfg.gpu_ids)
+                self.fold_val[fold_i] = proteinData(self.fold_val[fold_i], self.terms2i, self.prot_network,
+                                          self.prot_description, gpu_ids = cfg.gpu_ids)
 
 
     def zero_shot_fold_data(self, fold_zero_shot_terms_list):
@@ -204,12 +206,11 @@ class BioLoader:
         if not os.path.exists(cfg.emb_dir):
             os.mkdir(cfg.emb_dir)
             print('Warning: We created the embedding folder: {}'.format(cfg.emb_dir))
+        if cfg.emb_name not in os.listdir(cfg.emb_dir):
+            get_ontology_embeddings(cfg)
+        cfg.text_embedding_file = cfg.emb_dir + cfg.emb_name
+        self.text_embeddings = pd.read_pickle(cfg.text_embedding_file)
         if cfg.tp in ['graph', 'seq']:
-            if cfg.emb_name not in os.listdir(cfg.emb_dir):
-                gen_go_emb(cfg)
-            cfg.text_embedding_file = cfg.emb_dir + cfg.emb_name
-            self.text_embeddings = pd.read_pickle(cfg.text_embedding_file)
-
             self.text_embeddings = emb2tensor(self.text_embeddings, self.terms2i)
             if cfg.tp == 'graph':
                 self.pathway_embeddings = pd.read_pickle(cfg.pathway_emb_file)
@@ -218,13 +219,6 @@ class BioLoader:
                 self.text_embeddings = self.text_embeddings.float().cuda()
                 if cfg.tp == 'graph':
                     self.pathway_embeddings = self.pathway_embeddings.float().cuda()
-        elif cfg.tp == 'vec':
-            if cfg.emb_name not in os.listdir(cfg.emb_dir):
-                gen_co_emb(cfg)
-            cfg.text_embedding_file = cfg.emb_dir + cfg.emb_name
-            self.text_embeddings = pd.read_pickle(cfg.text_embedding_file)
-        else:
-            raise NotImplementedError
 
     def read_eval_files(self, cfg, eval_dname):
         feature_file, filter_key, label_key, label_file, gene_file = read_data_file(eval_dname, cfg.data_repo)

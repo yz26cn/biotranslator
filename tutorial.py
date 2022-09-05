@@ -1,8 +1,10 @@
 import os
 import pandas as pd
-from BioTranslator.loader import BioLoader
-from BioTranslator.biotranslator_function import setup_config, train_text_encoder, get_ontology_embeddings, train_biotranslator, \
-        test_biotranslator
+from biotranslator.loader import BioLoader
+from biotranslator.biotranslator_function import setup_config, train_text_encoder, train_biotranslator, \
+    test_biotranslator
+from biotranslator.utils import get_ontology_embeddings
+
 
 def create_repo(path):
     if not os.path.exists(path):
@@ -14,7 +16,7 @@ if __name__ == '__main__':
     # Train text encoder
     model_path = './Codebase/TextEncoder/model/text_encoder.pth'
     graphine_repo = './Codebase/TextEncoder/data/Graphine/dataset/'
-    # train_text_encoder(graphine_repo, model_path)
+    train_text_encoder(graphine_repo, model_path)
 
     # Build configs
     seq_repo = f'./Codebase/Protein'
@@ -37,9 +39,9 @@ if __name__ == '__main__':
     }
     vec_repo = f'./Codebase/SingleCell'
     vec_config = {
-        'task': 'cross-dataset',
+        'task': 'cross_dataset',
         'eval_dataset': 'muris_facs',
-        'vec_ontology_repo': f'{vec_repo}/data/Ontology_data/',
+        'vec_ontology_repo': f'{vec_repo}/data/ont_data/',
         'data_repo': f'{vec_repo}/data/sc_data/',
         'dataset': 'muris_droplet',
         'encoder_path': './Codebase/TextEncoder/Encoder/text_encoder.pth',
@@ -75,18 +77,17 @@ if __name__ == '__main__':
     seq_config = setup_config(seq_config, 'seq')
     vec_config = setup_config(vec_config, 'vec')
     graph_config = setup_config(graph_config, 'graph')
-
     cfgs = [seq_config, vec_config, graph_config]
 
-    # Get Ontology Embeddings
-    data_dir = seq_config.data_repo + seq_config.dataset + '/'
-    text_embs = []
-    for cfg in cfgs:
-        print(f'Get Ontology Embeddings for {cfg.tp} data')
-        # get_ontology_embeddings(model_path, data_dir, cfg)
+    # Note: ontology embeddings will be loaded when we create BioLoader in train_biotranslator() function.
+    # data_dir = seq_config.data_repo + seq_config.dataset + '/'
+    # text_embs = []
+    # for cfg in cfgs:
+    #     print(f'Get Ontology Embeddings for {cfg.tp} data')
+    #     get_ontology_embeddings(model_path, data_dir, cfg)
 
     # Train BioTranslators
-    encoders = train_biotranslator(cfgs)
+    translators = train_biotranslator(cfgs)
 
     # Test BioTranslators
     tasks = dict(
@@ -103,6 +104,6 @@ if __name__ == '__main__':
     for tp_idx, tp in enumerate(list(tasks.keys())):
         for task_idx in range(len(tasks[tp])):
             cfg = cfgs[tp_idx]
-            encoder = encoders[tp_idx]
+            encoder = translators[tp_idx]
             annos = test_biotranslator(cfg.data_repo, anno_data[tp][task_idx], cfg, encoder, tasks[tp][task_idx])
     print(annos)
