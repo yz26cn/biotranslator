@@ -16,7 +16,7 @@
 
 ## Latest additions
 
-```{include} release-notes/release_latest.md
+```{include} release_notes/release_latest.md
 ```
 
 ```{toctree}
@@ -28,7 +28,7 @@ news
 tutorial
 installation
 setup_datasets
-release-notes/index
+release_notes/index
 ```
 
 [github]: https://github.com/ywzhao2002/biotranslator
