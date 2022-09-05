@@ -6,6 +6,8 @@ Processed datasets including *CAFA3*, *GOA_Human*, *GOA_Mouse*, *GOA_Yeast*, *KE
 Processed datasets including *Tabula_Microcebus* and *Tabula_Sapiens* can be found at: <https://figshare.com/ndownloader/files/31777475> and <https://figshare.com/ndownloader/files/28846647>
 . Remaining datasets can be found from [OnClass](https://onclass.readthedocs.io/en/latest/introduction.html) package.
 
+Graphine dataset used for training text encoder can be downloaded from <https://zenodo.org/record/5320310/files/Graphine.zip?download=1>.
+
 
 #### Example dataset structure for protein sequence prediction and pathway analysis tasks
 
@@ -58,4 +60,11 @@ Processed datasets including *Tabula_Microcebus* and *Tabula_Sapiens* can be fou
 │   │   │   └── tabula-muris-senis-facs-official-raw-obj.h5ad
 │   │   └── Tabula_Sapiens
 │   │       └── TabulaSapiens.h5ad
+```
+
+#### Example dataset structure for text encoder
+```
+├── data
+│   ├── Graphine
+│   │   └── dataset
 ```
