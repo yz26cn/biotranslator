@@ -12,4 +12,4 @@ BioTranslator takes a user-written textual description of the new discovery and 
 
 [documentation]: https://biotranslator.readthedocs.io
 
-For more information, please visit the project's main repository [here](https://github.com/HanwenXuTHU/BioTranslatorProject).
+For more information, feel free to visit the project's main repository [here](https://github.com/HanwenXuTHU/BioTranslatorProject).

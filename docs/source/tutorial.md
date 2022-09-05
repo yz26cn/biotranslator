@@ -1,19 +1,19 @@
 # Tutorial
 
-## Import BioTranslator as:
+### Import BioTranslator as
 
 ```
 import biotranslator as bt
 ```
 
-## Import methods from API
+### Import methods from API
 ```
 from biotranslator.biotranslator_function import setup_config, train_text_encoder, train_biotranslator, \
     test_biotranslator
 ```
 
 
-## Train Text Encoder
+### Train Text Encoder
 ```
 model_path = './TextEncoder/model/encoder.pth'
 graphine_repo = './TextEncoder/data/Graphine/dataset/'
@@ -21,7 +21,7 @@ train_text_encoder(graphine_repo, model_path)
 ```
 
 
-## Build Configs
+### Build Configs
 Build config for protein sequence dataset:
 ```
 seq_repo = f'./Protein'
@@ -92,13 +92,13 @@ graph_config = {
 graph_config = setup_config(graph_config, 'graph')
 ```
 
-## Train BioTranlators
+### Train BioTranlators
 ```
 cfgs = [seq_config, vec_config, graph_config]
 translators = train_biotranslator(cfgs)
 ```
 
-## Test BioTranslators
+### Test BioTranslators
 ```
 tasks = dict(
         seq=['prot_func_pred'],

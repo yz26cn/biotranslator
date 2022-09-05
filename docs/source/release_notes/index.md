@@ -1,5 +1,6 @@
 (release-notes)=
+
 # Release notes
 
-```{include} release_latest.md
+```{include} release-latest.md
 ```

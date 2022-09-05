@@ -23,12 +23,12 @@
 :hidden: true
 :maxdepth: 1
 
+api
+news
 tutorial
 installation
 setup_datasets
-api
 release_notes/index
-news
 ```
 
 [github]: https://github.com/ywzhao2002/biotranslator
