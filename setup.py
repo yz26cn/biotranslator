@@ -6,13 +6,13 @@ with io.open('./README.md', encoding='utf-8') as f:
 
 setup(
     name = "BioTranslator",
-    version = "0.1.0",
+    version = "0.1.1",
     keywords = ("pip", "BioTranslator"),
     description = "BioTranslator: Cross-modal Translation for Zero-shot Biomedical Classification",
     long_description = readme,
     license = "MIT Licence",
 
-    url = "https://github.com/HanwenXuTHU/BioTranslatorProject",
+    url = "https://github.com/ywzhao2002/biotranslator",
     author = "Sheng Wang",
     author_email = "swang91@uw.edu",
 
