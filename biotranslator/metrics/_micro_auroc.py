@@ -1,5 +1,5 @@
 import numpy as np
-from _roc import compute_roc
+from ._roc import compute_roc
 
 def micro_auroc(labels, preds):
     roc_micro = np.zeros(np.size(preds, 1))
