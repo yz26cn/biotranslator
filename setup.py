@@ -6,7 +6,7 @@ with io.open('./README.md', encoding='utf-8') as f:
 
 setup(
     name = "BioTranslator",
-    version = "0.1.1",
+    version = "0.1.2",
     keywords = ("pip", "BioTranslator"),
     description = "BioTranslator: Cross-modal Translation for Zero-shot Biomedical Classification",
     long_description = readme,
