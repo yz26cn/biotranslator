@@ -16,6 +16,7 @@ To work with the latest version [on GitHub](https://github.com/ywzhao2002/biotra
 ```shell
 git clone https://github.com/ywzhao2002/biotranslator.git
 cd biotranslator
+python3.7 setup.py install
 ```
 
 ##### Install with Github CLI:
