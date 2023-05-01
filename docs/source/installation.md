@@ -14,7 +14,7 @@ To work with the latest version [on GitHub](https://github.com/ywzhao2002/biotra
 
 ##### Install with HTTPS:
 ```shell
-https://github.com/ywzhao2002/biotranslator.git
+git clone https://github.com/ywzhao2002/biotranslator.git
 cd biotranslator
 ```
 
